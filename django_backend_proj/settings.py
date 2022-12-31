@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'app',
-    'translations'
+
 ]
 
 MIDDLEWARE = [
@@ -141,7 +141,4 @@ MIDDLEWARE += [          # locale middleware
 
 LANGUAGES = (            # supported languages
     ('en', 'English'),
-    ('en-gb', 'English (Great Britain)'),
-    ('de', 'German'),
-    ('tr', 'Turkish'),
 )
