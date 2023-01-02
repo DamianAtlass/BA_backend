@@ -17,20 +17,23 @@ def ok(request):
 
 @api_view(['POST'])
 def createuser(request):
+    print(request.data)
     try:
         user = User.objects.create_user(username=request.data.get("email"), password=request.data.get("password"))
         user.save()
 
-        userinfo = UserInfo(user=user, alias="ben")
+        userinfo = UserInfo(user=user, alias=request.data.get("username"))
         userinfo.save()
+        print(f"User {user.username} created!")
         return Response(status=status.HTTP_200_OK)
     except IntegrityError as e:
         user = User.objects.get(username=request.data.get("email"))
-        print(user.userinfo.user)
-        user.delete()
-
-
-
-
-
+        print(e)
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
+
+@api_view(['POST'])
+def createadmin(request):
+    superuser = User.objects.create_superuser("admin", "admin@admin.com", "123admin")
+    superuser.save()
+    print("Created admin")
+    return Response(status=status.HTTP_200_OK)

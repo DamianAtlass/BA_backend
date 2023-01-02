@@ -20,5 +20,6 @@ from app import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     re_path(r"^api/ok/", views.ok),
-    re_path(r"^createuser/", views.createuser)
+    re_path(r"^api/createuser/", views.createuser),
+    re_path(r"^api/createadmin/", views.createadmin),
 ]
