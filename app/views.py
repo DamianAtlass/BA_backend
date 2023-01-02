@@ -7,12 +7,15 @@ from django.db.utils import IntegrityError
 from .models import UserInfo
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def ok(request):
     if request.method == 'GET':
         return Response(status=status.HTTP_200_OK)
 
-@api_view(['Get'])
+    if request.method == 'POST':
+        return Response(status=status.HTTP_200_OK)
+
+@api_view(['POST'])
 def createuser(request):
     try:
         user = User.objects.create_user(username=request.data.get("email"), password=request.data.get("password"))
