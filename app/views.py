@@ -5,14 +5,19 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
 from .models import UserInfo
+from django.contrib.auth import authenticate, login, logout
 
 
 @api_view(['GET', 'POST'])
 def ok(request):
     if request.method == 'GET':
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'POST':
+        try:
+            User.objects.get(username="123")
+        except User.DoesNotExist as e:
+            print(e, "!!!!!!!!!!!")
         return Response(status=status.HTTP_200_OK)
 
 @api_view(['POST'])
@@ -37,3 +42,31 @@ def createadmin(request):
     superuser.save()
     print("Created admin")
     return Response(status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def accounts(request):
+    if request.method == 'POST':
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        try:
+            User.objects.get(username=username)
+        except User.DoesNotExist as e:
+            return Response(status=status.HTTP_401_UNAUTHORIZED,
+                            data={
+                                "error-message": "Diese Email ist nicht in der Datenbank.",
+                                "error": "USER_NOT_FOUND"
+                            })
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED,
+                            data={
+                                "error-message": "Falsche Anmeldeinformationen.",
+                                "error": "WRONG_CREDENTIALS"
+                            })
+
+    return None
