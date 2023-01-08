@@ -20,6 +20,7 @@ def ok(request):
             print(e, "!!!!!!!!!!!")
         return Response(status=status.HTTP_200_OK)
 
+
 @api_view(['POST'])
 def createuser(request):
     print(request.data)
@@ -36,12 +37,14 @@ def createuser(request):
         print(e)
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
+
 @api_view(['POST'])
 def createadmin(request):
     superuser = User.objects.create_superuser("admin", "admin@admin.com", "123admin")
     superuser.save()
     print("Created admin")
     return Response(status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 def accounts(request):
@@ -61,12 +64,14 @@ def accounts(request):
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            return Response(status=status.HTTP_200_OK)
+            login(request, user)
+            return Response(status=status.HTTP_200_OK, data={
+                "success-message": f"Nutzer {user.userinfo.alias} erfolgreich eingeloggt ({user.is_authenticated})",
+                "success": "LOGIN_SUCCESS"
+            })
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED,
                             data={
                                 "error-message": "Falsche Anmeldeinformationen.",
                                 "error": "WRONG_CREDENTIALS"
                             })
-
-    return None
