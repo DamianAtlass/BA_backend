@@ -8,6 +8,7 @@ from .models import UserInfo
 from django.contrib.auth import authenticate, login, logout
 
 
+
 @api_view(['GET', 'POST'])
 def ok(request):
     if request.method == 'GET':
@@ -33,7 +34,6 @@ def createuser(request):
         print(f"User {user.username} created!")
         return Response(status=status.HTTP_200_OK)
     except IntegrityError as e:
-        user = User.objects.get(username=request.data.get("email"))
         print(e)
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
