@@ -4,8 +4,9 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
-from .models import UserInfo
+from .models import UserInfo, Dialog, GraphMessage
 from django.contrib.auth import authenticate, login, logout
+from django.core import serializers
 
 
 
@@ -31,7 +32,12 @@ def createuser(request):
 
         userinfo = UserInfo(user=user, alias=request.data.get("username"))
         userinfo.save()
+
+        dialog = Dialog(userinfo=userinfo, bot_type="BOT")
+        dialog.save()
+
         print(f"User {user.username} created!")
+
         return Response(status=status.HTTP_200_OK)
     except IntegrityError as e:
         print(e)
@@ -75,3 +81,23 @@ def accounts(request):
                                 "error-message": "Falsche Anmeldeinformationen.",
                                 "error": "WRONG_CREDENTIALS"
                             })
+
+
+@api_view(['GET'])
+def getmessage(request):
+    if request.method == 'GET':
+        first_message = GraphMessage.objects.get(is_start=True)
+
+        res = []
+        for r in first_message.next.all():
+            res.append({"pk": r.pk, "content": r.content})
+
+        return Response(status=status.HTTP_200_OK, data={
+            "success-message": f"XXX",
+            "success": "SUCCESS",
+            "message": {
+                "message": first_message.content
+            },
+            "responds": res
+        })
+    
