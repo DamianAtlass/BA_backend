@@ -13,14 +13,12 @@ from django.core import serializers
 @api_view(['GET', 'POST'])
 def ok(request):
     if request.method == 'GET':
+        print(request.data)
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'POST':
-        try:
-            User.objects.get(username="123")
-        except User.DoesNotExist as e:
-            print(e, "!!!!!!!!!!!")
-        return Response(status=status.HTTP_200_OK)
+        print(request.data)
+        return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
 
 @api_view(['POST'])
@@ -92,7 +90,7 @@ def accounts(request):
 @api_view(['GET'])
 def get_chatdata(request):
     if request.method == 'GET':
-
+        print("data: " ,request.data)
         user_response_pk = request.data.get("user_response_pk", None)
         get_history = request.data.get("get_history", False)
         username = request.data.get("username", None)
@@ -147,7 +145,7 @@ def get_chatdata(request):
 
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
-    while True: #TODO make is_bot() function
+    while True:
         new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
                                            dialog=user.dialog,
                                            graph_message=bot_response)
@@ -155,7 +153,8 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         bot_responses.append({"author": bot_response.author,
                               "content": bot_response.content})
 
-        if bot_response.next.all()[0].author == "BOT":
+        if not bot_response.is_end and bot_response.next.all()[0].author == "BOT": #TODO make is_bot() function
             bot_response = bot_response.next.all()[0]
         else:
             return bot_response, bot_responses
+
