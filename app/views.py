@@ -87,17 +87,17 @@ def accounts(request):
                             })
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 def get_chatdata(request):
-    if request.method == 'GET':
-        print("data: " ,request.data)
+    if request.method == 'POST':
+        print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
         get_history = request.data.get("get_history", False)
         username = request.data.get("username", None)
         user = User.objects.get(username=username)
 
         print(request.data)
-        # if bot message targetet (just for developing)
+        # if bot message targeted (just for developing)
         if user_response_pk and not GraphMessage.objects.get(pk=user_response_pk).author == "USER":
             print("Message was not from USER!")
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -129,6 +129,7 @@ def get_chatdata(request):
 
         for res in bot_response.next.all():
             user_response = {
+                "author": "USER",
                 "pk": res.pk,
                 "content": res.content
             }
