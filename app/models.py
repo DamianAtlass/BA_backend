@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from datetime import datetime
 
 # Create your models here.
 
@@ -12,7 +13,7 @@ class UserInfo(models.Model):
     verified = models.BooleanField("Verified", default=False)
 
     def __str__(self):
-        return f"Userinfo for {self.user} ({self.alias})"
+        return f"[{self.pk}] Userinfo for {self.user} ({self.alias})"
 
     class Meta:
         verbose_name = "UserInfo"
@@ -22,32 +23,27 @@ class UserInfo(models.Model):
 class GraphMessage(models.Model):
     content = models.CharField(max_length=240, null=True)
     author = models.CharField(max_length=25, null=True)
-    prev = models.ManyToManyField("self", blank=True)
-    next = models.ManyToManyField("self", blank=True)
+    next = models.ManyToManyField("self", blank=True, symmetrical=False)
     is_start = models.BooleanField(null=False, default=False)
     is_end = models.BooleanField(null=False, default=False)
 
     def __str__(self):
-        return f"{self.author}: '{self.content}'"
-
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
-                          sort_keys=True, indent=4)
+        return f"[{self.pk}] {self.author}: '{self.content}'"
 
 
 class Dialog(models.Model):
-    userinfo = models.OneToOneField(UserInfo, related_name="dialog",  on_delete=models.CASCADE, null=True)
+    user = models.OneToOneField(User, related_name="dialog",  on_delete=models.CASCADE, null=True)
     bot_type = models.CharField(max_length=25, null=True)
 
     def __str__(self):
-        return f"Dialog with {self.bot_type}"
+        return f"Dialog between {self.bot_type} and {self.user.username}"
 
 
 class DialogMessage(models.Model):
-    #TODO: number field that indecates order
+    order_id = models.IntegerField(null=False, default=-1)
     date = models.DateTimeField(auto_now_add=True)
     dialog = models.ForeignKey(Dialog, related_name="messages", on_delete=models.CASCADE)
     graph_message = models.ForeignKey(GraphMessage, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
-        return f"[{self.data}]: {self.graph_message.content}"
+        return f"[{self.pk}] ({self.order_id}) {self.date.strftime('%Y-%m-%d %H:%M:%S')} - {self.graph_message.author}: {self.graph_message.content}"

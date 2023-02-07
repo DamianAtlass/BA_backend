@@ -24,5 +24,5 @@ urlpatterns = [
     re_path(r"api/createadmin/", views.createadmin),
     path("api/accounts/", include("django.contrib.auth.urls")),
     re_path("api/accounts/", views.accounts),
-    re_path("api/getmessage/", views.getmessage),
+    re_path("api/getchatdata/", views.get_chatdata),
 ]
