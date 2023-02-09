@@ -92,53 +92,57 @@ def get_chatdata(request):
     if request.method == 'POST':
         print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
-        get_history = request.data.get("get_history", False)
+        get_history =  False
         username = request.data.get("username", None)
         user = User.objects.get(username=username)
 
         print(request.data)
-        # if bot message targeted (just for developing)
-        if user_response_pk and not GraphMessage.objects.get(pk=user_response_pk).author == "USER":
-            print("Message was not from USER!")
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        print("last_bot_message_pk: ", user.userinfo.last_bot_message_pk)
+        if not user_response_pk and not user.userinfo.last_bot_message_pk == -1:
+            print("returned to conversation")
+            user_response_pk = user.userinfo.last_bot_message_pk
+            get_history = True
 
         history = []
         choices = []
+        bot_responses = []
 
         if get_history:
+            print("HISTORY")
             dialog_messages = user.dialog.messages.all().order_by('order_id')
 
             for m in dialog_messages:
                 history.append({"author": m.graph_message.author,
                                 "content": m.graph_message.content})
-
-        if user_response_pk:
-            # add user response to dialog
-            user_response_graph_message = GraphMessage.objects.get(pk=user_response_pk)
-            new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
-                                               dialog=user.dialog,
-                                               graph_message=user_response_graph_message)
-            new_dialog_message.save()
-
-            bot_response = user_response_graph_message.next.all()[0]
-            bot_response, bot_responses = get_bot_messages(bot_response, user)
-
         else:
-            bot_response = GraphMessage.objects.get(is_start=True)
-            bot_response, bot_responses = get_bot_messages(bot_response, user)
+            print("CHAT")
+            if user_response_pk:
+                # add user response to dialog
+                user_response_graph_message = GraphMessage.objects.get(pk=user_response_pk)
+                new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
+                                                   dialog=user.dialog,
+                                                   graph_message=user_response_graph_message)
+                new_dialog_message.save()
 
-        for res in bot_response.next.all():
-            user_response = {
-                "author": "USER",
-                "pk": res.pk,
-                "content": res.content
-            }
-            print("response: ", user_response)
-            choices.append(user_response)
+                bot_response = user_response_graph_message.next.all()[0]
+                last_bot_response, bot_responses = get_bot_messages(bot_response, user)
+
+            else:
+                bot_response = GraphMessage.objects.get(is_start=True)
+                last_bot_response, bot_responses = get_bot_messages(bot_response, user)
+
+            for res in last_bot_response.next.all():
+                user_response = {
+                    "author": "USER",
+                    "pk": res.pk,
+                    "content": res.content
+                }
+                print("response: ", user_response)
+                choices.append(user_response)
 
         return Response(status=status.HTTP_200_OK, data={
             "history": history,
-            "bot_responses": bot_responses,
+            "bot_responses": [] if get_history else bot_responses,
             "choices": choices,
 
         })
@@ -147,6 +151,7 @@ def get_chatdata(request):
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
     while True:
+        #write dialog message in history
         new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
                                            dialog=user.dialog,
                                            graph_message=bot_response)
@@ -154,6 +159,10 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         bot_responses.append({"author": bot_response.author,
                               "content": bot_response.content})
 
+        # remember point in conversation
+        user.userinfo.last_bot_message_pk = bot_response.pk
+        user.userinfo.save()
+        print("set user.userinfo.last_bot_message_pk to ", user.userinfo.last_bot_message_pk)
         if not bot_response.is_end and bot_response.next.all()[0].author == "BOT": #TODO make is_bot() function
             bot_response = bot_response.next.all()[0]
         else:

@@ -11,6 +11,7 @@ class UserInfo(models.Model):
     user = models.OneToOneField(User, related_name="userinfo",  on_delete=models.CASCADE, null=True)
     alias = models.CharField("Alias", max_length=240, null=True)
     verified = models.BooleanField("Verified", default=False)
+    last_bot_message_pk = models.IntegerField(default=-1)
 
     def __str__(self):
         return f"[{self.pk}] Userinfo for {self.user} ({self.alias})"
