@@ -20,34 +20,6 @@ def ok(request):
         print(request.data)
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
-
-@api_view(['POST'])
-def createuser(request):
-    print(request.data)
-    #create user
-    try:
-        new_user = User.objects.create_user(username=request.data.get("email"), password=request.data.get("password"))
-        new_user.save()
-
-        userinfo = UserInfo(user=new_user, alias=request.data.get("username"))
-        userinfo.save()
-
-        print(f"User {new_user.username} created!")
-
-    except IntegrityError as e:
-        print(e)
-        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
-
-    #create dialog
-    try:
-        new_dialog = Dialog(user=new_user, bot_type="BOT")
-        new_dialog.save()
-    except Error as e:
-        print(e)
-        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
-
-    return Response(status=status.HTTP_200_OK)
-
 @api_view(['POST'])
 def createadmin(request):
     superuser = User.objects.create_superuser("admin", "admin@admin.com", "123admin")
@@ -57,7 +29,7 @@ def createadmin(request):
 
 
 @api_view(['POST'])
-def accounts(request):
+def login(request):
     if request.method == 'POST':
         username = request.data.get("username")
         password = request.data.get("password")
@@ -87,6 +59,53 @@ def accounts(request):
                             })
 
 
+@api_view(['POST', 'DELETE'])
+def accounts(request):
+    if request.method == 'POST':
+        print(request.data)
+        #create user
+        try:
+            new_user = User.objects.create_user(username=request.data.get("email"), password=request.data.get("password"))
+            new_user.save()
+
+            userinfo = UserInfo(user=new_user, alias=request.data.get("username"))
+            userinfo.save()
+
+            print(f"User {new_user.username} created!")
+
+        except IntegrityError as e:
+            print(e)
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
+
+        #create dialog
+        try:
+            new_dialog = Dialog(user=new_user, bot_type="BOT")
+            new_dialog.save()
+        except Error as e:
+            print(e)
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
+
+        return Response(status=status.HTTP_200_OK)
+
+    if request.method == 'DELETE':
+        print(request)
+        username = request.data.get("username", None)
+
+        try:
+            User.objects.get(username=username).delete()
+        except User.DoesNotExist as e:
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={
+                                "error": str(e)
+                            })
+        else:
+            try:
+                User.objects.get(username=username)
+            except User.DoesNotExist:
+                return Response(status=status.HTTP_200_OK)
+
+
+
 @api_view(['POST'])
 def get_chatdata(request):
 
@@ -97,54 +116,38 @@ def get_chatdata(request):
         username = request.data.get("username", None)
         user = User.objects.get(username=username)
 
-        get_history = False
-        last_bot_response = None
         history = []
         bot_responses = []
         choices = []
 
         print("last_bot_message_pk: ", user.userinfo.last_bot_message_pk)
-        print("user_response_pk", user_response_pk,"  user.userinfo.last_bot_message_pk")
+        print("user_response_pk", user_response_pk, "  user.userinfo.last_bot_message_pk")
 
         if user_response_pk:
-            pass  # RESPONSE
+            print("RESPONSE, user responds to bot")
+            user_response_graph_message = GraphMessage.objects.get(pk=user_response_pk)
+            new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
+                                               dialog=user.dialog,
+                                               graph_message=user_response_graph_message)
+            new_dialog_message.save()
+
+            bot_response = user_response_graph_message.next.all()[0]
+            last_bot_response, bot_responses = get_bot_messages(bot_response, user)
+
         else:
             if user.userinfo.last_bot_message_pk == -1:
-                #  start new convo
-                pass
-            else:
-                # return history
-                pass
-
-        if not user_response_pk and not user.userinfo.last_bot_message_pk == -1:
-            print("HISTORY, user returned to conversation")
-
-            dialog_messages = user.dialog.messages.all().order_by('order_id')
-
-            for m in dialog_messages:
-                history.append({"author": m.graph_message.author,
-                                "content": m.graph_message.content})
-
-            last_bot_response = GraphMessage.objects.get(pk=user.userinfo.last_bot_message_pk)
-
-        else:
-            print("CHAT")
-            if user_response_pk:
-                print("RESPONSE, user responds to bot")
-                # add user response to dialog
-                user_response_graph_message = GraphMessage.objects.get(pk=user_response_pk)
-                new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
-                                                   dialog=user.dialog,
-                                                   graph_message=user_response_graph_message)
-                new_dialog_message.save()
-
-                bot_response = user_response_graph_message.next.all()[0]
-                last_bot_response, bot_responses = get_bot_messages(bot_response, user)
-
-            else:
                 print("NEW CONVERSATION, user starts a new chat")
                 bot_response = GraphMessage.objects.get(is_start=True)
                 last_bot_response, bot_responses = get_bot_messages(bot_response, user)
+
+            else:
+                print("HISTORY, user returned to conversation")
+                dialog_messages = user.dialog.messages.all().order_by('order_id')
+                for m in dialog_messages:
+                    history.append({"author": m.graph_message.author,
+                                    "content": m.graph_message.content})
+                last_bot_response = GraphMessage.objects.get(pk=user.userinfo.last_bot_message_pk)
+
         # return users' choices
         for user_res in last_bot_response.next.all():
             user_response = {
@@ -152,21 +155,22 @@ def get_chatdata(request):
                 "pk": user_res.pk,
                 "content": user_res.content
             }
-            print("response: ", user_response)
             choices.append(user_response)
 
-        return Response(status=status.HTTP_200_OK, data={
+        response_data = {
             "history": history,
-            "bot_responses": [] if get_history else bot_responses,
+            "bot_responses": bot_responses,
             "choices": choices,
 
-        })
+        }
+
+        return Response(status=status.HTTP_200_OK, data=response_data)
 
 
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
     while True:
-        #write dialog message in history
+        # dialog message in history
         new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
                                            dialog=user.dialog,
                                            graph_message=bot_response)
@@ -177,7 +181,6 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         # remember point in conversation
         user.userinfo.last_bot_message_pk = bot_response.pk
         user.userinfo.save()
-        print("set user.userinfo.last_bot_message_pk to ", user.userinfo.last_bot_message_pk)
         if not bot_response.is_end and bot_response.next.all()[0].author == "BOT": #TODO make is_bot() function
             bot_response = bot_response.next.all()[0]
         else:
