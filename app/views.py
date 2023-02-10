@@ -5,7 +5,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError, Error
 from .models import UserInfo, Dialog, GraphMessage, DialogMessage
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login as django_login, logout
 from django.core import serializers
 
 
@@ -30,6 +30,7 @@ def createadmin(request):
 
 @api_view(['POST'])
 def login(request):
+    print("LOGIN ATTEMPT")
     if request.method == 'POST':
         username = request.data.get("username")
         password = request.data.get("password")
@@ -44,9 +45,10 @@ def login(request):
                             })
 
         user = authenticate(request, username=username, password=password)
+        print("HERE2")
 
         if user is not None:
-            login(request, user)
+            django_login(request, user)
             return Response(status=status.HTTP_200_OK, data={
                 "success-message": f"Nutzer {user.userinfo.alias} erfolgreich eingeloggt ({user.is_authenticated})",
                 "success": "LOGIN_SUCCESS"
