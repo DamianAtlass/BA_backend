@@ -8,7 +8,7 @@ from .models import UserInfo, Dialog, GraphMessage, DialogMessage
 from django.contrib.auth import authenticate, login as django_login, logout
 from django.core import serializers
 
-
+INITIAL_USER = "INITIAL_USER"
 
 @api_view(['GET', 'POST'])
 def ok(request):
@@ -45,7 +45,6 @@ def login(request):
                             })
 
         user = authenticate(request, username=username, password=password)
-        print("HERE2")
 
         if user is not None:
             django_login(request, user)
@@ -90,9 +89,9 @@ def accounts(request):
         return Response(status=status.HTTP_200_OK)
 
     if request.method == 'DELETE':
-        print(request)
+        print(request.data)
         username = request.data.get("username", None)
-
+        tmp = username
         try:
             User.objects.get(username=username).delete()
         except User.DoesNotExist as e:
@@ -104,6 +103,7 @@ def accounts(request):
             try:
                 User.objects.get(username=username)
             except User.DoesNotExist:
+                print(f"User {tmp} was successfully deleted!")
                 return Response(status=status.HTTP_200_OK)
 
 
@@ -116,14 +116,14 @@ def get_chatdata(request):
         print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
         username = request.data.get("username", None)
-        user = User.objects.get(username=username)
 
+        if username == INITIAL_USER:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.get(username=username)
         history = []
         bot_responses = []
         choices = []
-
-        print("last_bot_message_pk: ", user.userinfo.last_bot_message_pk)
-        print("user_response_pk", user_response_pk, "  user.userinfo.last_bot_message_pk")
 
         if user_response_pk:
             print("RESPONSE, user responds to bot")
