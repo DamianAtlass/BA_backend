@@ -92,20 +92,21 @@ def get_chatdata(request):
     if request.method == 'POST':
         print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
-        get_history =  False
         username = request.data.get("username", None)
         user = User.objects.get(username=username)
+
+        get_history = False
+        last_bot_response = None
+        history = []
+        choices = []
+        bot_responses = []
 
         print(request.data)
         print("last_bot_message_pk: ", user.userinfo.last_bot_message_pk)
         if not user_response_pk and not user.userinfo.last_bot_message_pk == -1:
             print("returned to conversation")
-            user_response_pk = user.userinfo.last_bot_message_pk
             get_history = True
-
-        history = []
-        choices = []
-        bot_responses = []
+            last_bot_response = GraphMessage.objects.get(pk=user.userinfo.last_bot_message_pk)
 
         if get_history:
             print("HISTORY")
@@ -114,6 +115,7 @@ def get_chatdata(request):
             for m in dialog_messages:
                 history.append({"author": m.graph_message.author,
                                 "content": m.graph_message.content})
+
         else:
             print("CHAT")
             if user_response_pk:
@@ -130,15 +132,15 @@ def get_chatdata(request):
             else:
                 bot_response = GraphMessage.objects.get(is_start=True)
                 last_bot_response, bot_responses = get_bot_messages(bot_response, user)
-
-            for res in last_bot_response.next.all():
-                user_response = {
-                    "author": "USER",
-                    "pk": res.pk,
-                    "content": res.content
-                }
-                print("response: ", user_response)
-                choices.append(user_response)
+        # return users' choices
+        for user_res in last_bot_response.next.all():
+            user_response = {
+                "author": "USER",
+                "pk": user_res.pk,
+                "content": user_res.content
+            }
+            print("response: ", user_response)
+            choices.append(user_response)
 
         return Response(status=status.HTTP_200_OK, data={
             "history": history,
