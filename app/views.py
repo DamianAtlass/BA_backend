@@ -107,6 +107,28 @@ def accounts(request):
                 return Response(status=status.HTTP_200_OK)
 
 
+@api_view(['DELETE'])
+def history(request):
+    if request.method == 'DELETE':
+        print(request.data)
+        username = request.data.get("username", None)
+        user = User.objects.get(username=username)
+
+        user.userinfo.last_bot_message_pk = -1
+        user.userinfo.save()
+        try:
+            user.dialog.delete()
+        except Dialog.DoesNotExist as e:
+            print(e)
+            pass
+        else:
+            print(f"History of {username} was successfully deleted!")
+    new_dialog = Dialog(user=User.objects.get(username=username), bot_type="BOT")
+    new_dialog.save()
+
+    return Response(status=status.HTTP_200_OK)
+
+
 
 @api_view(['POST'])
 def get_chatdata(request):
