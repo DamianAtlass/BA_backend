@@ -32,18 +32,18 @@ class GraphMessage(models.Model):
         return f"[{self.pk}] {self.author}: '{self.content}'"
 
 
-class Dialog(models.Model):
-    user = models.OneToOneField(User, related_name="dialog",  on_delete=models.CASCADE, null=True)
+class History(models.Model):
+    user = models.OneToOneField(User, related_name="history",  on_delete=models.CASCADE, null=True)
     bot_type = models.CharField(max_length=25, null=True)
 
     def __str__(self):
-        return f"Dialog between {self.bot_type} and {self.user.username}"
+        return f"History between {self.bot_type} and {self.user.username}"
 
 
-class DialogMessage(models.Model):
+class HistoryMessage(models.Model):
     order_id = models.IntegerField(null=False, default=-1)
     date = models.DateTimeField(auto_now_add=True)
-    dialog = models.ForeignKey(Dialog, related_name="messages", on_delete=models.CASCADE)
+    history = models.ForeignKey(History, related_name="messages", on_delete=models.CASCADE)
     graph_message = models.ForeignKey(GraphMessage, on_delete=models.CASCADE, null=True)
 
     def __str__(self):

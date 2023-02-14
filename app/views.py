@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError, Error
-from .models import UserInfo, Dialog, GraphMessage, DialogMessage
+from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login, logout
 from django.core import serializers
 
@@ -19,6 +19,7 @@ def ok(request):
     if request.method == 'POST':
         print(request.data)
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+
 
 @api_view(['POST'])
 def createadmin(request):
@@ -64,7 +65,7 @@ def login(request):
 def accounts(request):
     if request.method == 'POST':
         print(request.data)
-        #create user
+        # create user
         try:
             new_user = User.objects.create_user(username=request.data.get("email"), password=request.data.get("password"))
             new_user.save()
@@ -78,10 +79,10 @@ def accounts(request):
             print(e)
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
-        #create dialog
+        # create history
         try:
-            new_dialog = Dialog(user=new_user, bot_type="BOT")
-            new_dialog.save()
+            new_history = History(user=new_user, bot_type="BOT")
+            new_history.save()
         except Error as e:
             print(e)
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
@@ -117,17 +118,16 @@ def history(request):
         user.userinfo.last_bot_message_pk = -1
         user.userinfo.save()
         try:
-            user.dialog.delete()
-        except Dialog.DoesNotExist as e:
+            user.history.delete()
+        except History.DoesNotExist as e:
             print(e)
             pass
         else:
             print(f"History of {username} was successfully deleted!")
-    new_dialog = Dialog(user=User.objects.get(username=username), bot_type="BOT")
-    new_dialog.save()
+    new_history = History(user=User.objects.get(username=username), bot_type="BOT")
+    new_history.save()
 
     return Response(status=status.HTTP_200_OK)
-
 
 
 @api_view(['POST'])
@@ -150,10 +150,10 @@ def get_chatdata(request):
         if user_response_pk:
             print("RESPONSE, user responds to bot")
             user_response_graph_message = GraphMessage.objects.get(pk=user_response_pk)
-            new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
-                                               dialog=user.dialog,
-                                               graph_message=user_response_graph_message)
-            new_dialog_message.save()
+            new_history_message = HistoryMessage(order_id=len(user.history.messages.all()) + 1,
+                                                 history=user.history,
+                                                 graph_message=user_response_graph_message)
+            new_history_message.save()
 
             bot_response = user_response_graph_message.next.all()[0]
             last_bot_response, bot_responses = get_bot_messages(bot_response, user)
@@ -166,8 +166,8 @@ def get_chatdata(request):
 
             else:
                 print("HISTORY, user returned to conversation")
-                dialog_messages = user.dialog.messages.all().order_by('order_id')
-                for m in dialog_messages:
+                history_messages = user.history.messages.all().order_by('order_id')
+                for m in history_messages:
                     history.append({"author": m.graph_message.author,
                                     "content": m.graph_message.content})
                 last_bot_response = GraphMessage.objects.get(pk=user.userinfo.last_bot_message_pk)
@@ -194,11 +194,11 @@ def get_chatdata(request):
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
     while True:
-        # dialog message in history
-        new_dialog_message = DialogMessage(order_id=len(user.dialog.messages.all())+1,
-                                           dialog=user.dialog,
-                                           graph_message=bot_response)
-        new_dialog_message.save()
+        # history_message in history
+        new_history_message = HistoryMessage(order_id=len(user.history.messages.all()) + 1,
+                                             history=user.history,
+                                             graph_message=bot_response)
+        new_history_message.save()
         bot_responses.append({"author": bot_response.author,
                               "content": bot_response.content})
 
