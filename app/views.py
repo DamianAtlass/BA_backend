@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.db.utils import IntegrityError, Error
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login, logout
+from datetime import datetime
 from django.core import serializers
 
 INITIAL_USER = "INITIAL_USER"
@@ -188,7 +189,8 @@ def get_chatdata(request):
                 history_messages = user.history.messages.all().order_by('order_id')
                 for m in history_messages:
                     history.append({"author": m.graph_message.author,
-                                    "content": m.graph_message.content})
+                                    "content": m.graph_message.content,
+                                    "date": m.date.strftime("%H:%M")})
                 last_bot_response = GraphMessage.objects.get(pk=user.userinfo.last_bot_message_pk)
 
         # return users' choices
@@ -219,7 +221,8 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
                                              graph_message=bot_response)
         new_history_message.save()
         bot_responses.append({"author": bot_response.author,
-                              "content": bot_response.content})
+                              "content": bot_response.content,
+                              "date": datetime.now().strftime("%H:%M")})
 
         # remember point in conversation
         user.userinfo.last_bot_message_pk = bot_response.pk
