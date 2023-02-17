@@ -12,6 +12,7 @@ class UserInfo(models.Model):
     alias = models.CharField("Alias", max_length=240, null=True)
     verified = models.BooleanField("Verified", default=False)
     last_bot_message_pk = models.IntegerField(default=-1)
+    dialog_style = models.CharField("Dialog Style", max_length=60, null=True)
 
     def __str__(self):
         return f"[{self.pk}] Userinfo for {self.user} ({self.alias})"

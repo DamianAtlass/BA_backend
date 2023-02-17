@@ -9,6 +9,12 @@ from django.contrib.auth import authenticate, login as django_login, logout
 from django.core import serializers
 
 INITIAL_USER = "INITIAL_USER"
+# dialog styles
+DIALOG_STYLE_ONE_ON_ONE = "ONE_ON_ONE"
+DIALOG_STYLE_COLORED_BUBBLES = "COLORED_BUBBLES"
+DIALOG_STYLE_CLASSIC_GROUP = "CLASSIC_GROUP"
+DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
+
 
 @api_view(['GET', 'POST'])
 def ok(request):
@@ -51,7 +57,8 @@ def login(request):
             django_login(request, user)
             return Response(status=status.HTTP_200_OK, data={
                 "success-message": f"Nutzer {user.userinfo.alias} erfolgreich eingeloggt ({user.is_authenticated})",
-                "success": "LOGIN_SUCCESS"
+                "success": "LOGIN_SUCCESS",
+                "dialog_style": user.userinfo.dialog_style,
             })
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED,
@@ -70,7 +77,19 @@ def accounts(request):
             new_user = User.objects.create_user(username=request.data.get("email"), password=request.data.get("password"))
             new_user.save()
 
-            userinfo = UserInfo(user=new_user, alias=request.data.get("username"))
+            dialog_style = ""
+            #TODO: calculate dialog style randomly
+            match request.data.get("email"):
+                case "alice@mail.com":
+                    dialog_style = DIALOG_STYLE_ONE_ON_ONE
+                case "ben@mail.com":
+                    dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+                case "christian@mail.de":
+                    dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+                case "daniel@mail.de":
+                    dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+
+            userinfo = UserInfo(user=new_user, alias=request.data.get("username"), dialog_style=dialog_style)
             userinfo.save()
 
             print(f"User {new_user.username} created!")
@@ -205,7 +224,7 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         # remember point in conversation
         user.userinfo.last_bot_message_pk = bot_response.pk
         user.userinfo.save()
-        if not bot_response.is_end and bot_response.next.all()[0].author == "BOT": #TODO make is_bot() function
+        if not bot_response.is_end and not bot_response.next.all()[0].author == "USER": #TODO make is_bot() function
             bot_response = bot_response.next.all()[0]
         else:
             return bot_response, bot_responses
