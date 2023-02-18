@@ -22,3 +22,4 @@ django_backend_proj/__pycache__/settings.cpython-310.pyc
 django_backend_proj/__pycache__/urls.cpython-310.pyc
 django_backend_proj/__pycache__/wsgi.cpython-310.pyc
 app/migrations/__pycache__/
+app/__pycache__/

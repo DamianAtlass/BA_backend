@@ -4,10 +4,14 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError, Error
+
+from .helper import convert_to_localtime
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login, logout
 from datetime import datetime
-from django.core import serializers
+from django.utils import timezone
+import pytz
+
 
 INITIAL_USER = "INITIAL_USER"
 # dialog styles
@@ -167,6 +171,8 @@ def get_chatdata(request):
         bot_responses = []
         choices = []
 
+        print("######timezone time now:", convert_to_localtime(timezone.now()))
+
         if user_response_pk:
             print("RESPONSE, user responds to bot")
             user_response_graph_message = GraphMessage.objects.get(pk=user_response_pk)
@@ -190,7 +196,7 @@ def get_chatdata(request):
                 for m in history_messages:
                     history.append({"author": m.graph_message.author,
                                     "content": m.graph_message.content,
-                                    "date": m.date.strftime("%H:%M")})
+                                    "date": convert_to_localtime(m.date)})
                 last_bot_response = GraphMessage.objects.get(pk=user.userinfo.last_bot_message_pk)
 
         # return users' choices
@@ -222,7 +228,7 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         new_history_message.save()
         bot_responses.append({"author": bot_response.author,
                               "content": bot_response.content,
-                              "date": datetime.now().strftime("%H:%M")})
+                              "date": convert_to_localtime(datetime.now())})
 
         # remember point in conversation
         user.userinfo.last_bot_message_pk = bot_response.pk
@@ -231,4 +237,3 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
             bot_response = bot_response.next.all()[0]
         else:
             return bot_response, bot_responses
-

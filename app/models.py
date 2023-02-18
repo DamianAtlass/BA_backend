@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from datetime import datetime
+from .helper import convert_to_localtime
 
 # Create your models here.
 
@@ -48,4 +49,4 @@ class HistoryMessage(models.Model):
     graph_message = models.ForeignKey(GraphMessage, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
-        return f"[{self.pk}] ({self.order_id}) {self.date.strftime('%Y-%m-%d %H:%M:%S')} - {self.graph_message.author}: {self.graph_message.content}"
+        return f"[{self.pk}] ({self.order_id}) {convert_to_localtime(self.date, format='%d.%m. %H:%M:%S')} - {self.graph_message.author}: {self.graph_message.content}"
