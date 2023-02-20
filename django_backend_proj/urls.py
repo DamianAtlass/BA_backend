@@ -25,6 +25,6 @@ urlpatterns = [
     path("api/accounts/", include("django.contrib.auth.urls")),
     re_path("api/accounts/", views.accounts),
     re_path("api/history/", views.history),
-    re_path('api/surveydata/(?P<username>\w{0,50})/$', views.foo),
+    re_path(r'api/surveydata/(?P<user_pk>\d{3})/$', views.survey_data),
     re_path("api/getchatdata/", views.get_chatdata),
 ]

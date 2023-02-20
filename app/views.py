@@ -22,12 +22,13 @@ DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 
 
 @api_view(['GET', 'POST'])
-def ok(request):
+def ok(request, user_pk="default"):
     if request.method == 'GET':
         print(request.data)
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'POST':
+        print(user_pk)
         print(request.data)
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
@@ -44,6 +45,7 @@ def createadmin(request):
 def login(request):
     print("LOGIN ATTEMPT")
     if request.method == 'POST':
+        print(request.data)
         username = request.data.get("username")
         password = request.data.get("password")
 
@@ -53,7 +55,7 @@ def login(request):
             return Response(status=status.HTTP_401_UNAUTHORIZED,
                             data={
                                 "error-message": "Diese Email ist nicht in der Datenbank.",
-                                "error": "USER_NOT_FOUND"
+                                "error": "USER_NOT_FOUND",
                             })
 
         user = authenticate(request, username=username, password=password)
@@ -64,6 +66,7 @@ def login(request):
                 "success-message": f"Nutzer {user.username} erfolgreich eingeloggt ({user.is_authenticated})",
                 "success": "LOGIN_SUCCESS",
                 "dialog_style": user.userinfo.dialog_style,
+                "username": user.username,
                 "user_pk": user.pk,
             })
         else:
@@ -156,10 +159,10 @@ def history(request):
 
 
 @api_view(['POST'])
-def foo(request, username=None):
-    print("HERE", request.GET.get('q', 'default'))
+def survey_data(request, user_pk=None):
     if request.method == 'POST':
-        print("username:", username)
+        user_pk = int(user_pk)
+        print("user_pk:", user_pk, type(user_pk))
         return Response(status=status.HTTP_200_OK)
 
 
@@ -178,8 +181,6 @@ def get_chatdata(request):
         history = []
         bot_responses = []
         choices = []
-
-        print("######timezone time now:", convert_to_localtime(timezone.now()))
 
         if user_response_pk:
             print("RESPONSE, user responds to bot")
