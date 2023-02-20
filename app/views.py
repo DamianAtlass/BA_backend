@@ -61,9 +61,10 @@ def login(request):
         if user is not None:
             django_login(request, user)
             return Response(status=status.HTTP_200_OK, data={
-                "success-message": f"Nutzer {user.userinfo.alias} erfolgreich eingeloggt ({user.is_authenticated})",
+                "success-message": f"Nutzer {user.username} erfolgreich eingeloggt ({user.is_authenticated})",
                 "success": "LOGIN_SUCCESS",
                 "dialog_style": user.userinfo.dialog_style,
+                "user_pk": user.pk,
             })
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED,
@@ -79,7 +80,7 @@ def accounts(request):
         print(request.data)
         # create user
         try:
-            new_user = User.objects.create_user(username=request.data.get("email"), password=request.data.get("password"))
+            new_user = User.objects.create_user(username=request.data.get("username"), password=request.data.get("password"))
             new_user.save()
 
             dialog_style = ""
@@ -94,7 +95,7 @@ def accounts(request):
                 case "daniel@mail.de":
                     dialog_style = DIALOG_STYLE_COLORED_BUBBLES
 
-            userinfo = UserInfo(user=new_user, alias=request.data.get("username"), dialog_style=dialog_style)
+            userinfo = UserInfo(user=new_user, email=request.data.get("email"), dialog_style=dialog_style)
             userinfo.save()
 
             print(f"User {new_user.username} created!")
