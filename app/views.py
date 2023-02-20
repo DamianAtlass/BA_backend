@@ -228,7 +228,8 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         new_history_message.save()
         bot_responses.append({"author": bot_response.author,
                               "content": bot_response.content,
-                              "date": convert_to_localtime(datetime.now())})
+                              "date": convert_to_localtime(datetime.now()),
+                              "dialogIsComplete": bot_response.is_end})
 
         # remember point in conversation
         user.userinfo.last_bot_message_pk = bot_response.pk
