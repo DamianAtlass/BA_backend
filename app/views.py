@@ -148,15 +148,22 @@ def history(request):
             pass
         else:
             print(f"History of {username} was successfully deleted!")
-    new_history = History(user=User.objects.get(username=username), bot_type="BOT")
-    new_history.save()
+        new_history = History(user=User.objects.get(username=username), bot_type="BOT")
+        new_history.save()
 
-    return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def foo(request, username=None):
+    print("HERE", request.GET.get('q', 'default'))
+    if request.method == 'POST':
+        print("username:", username)
+        return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 def get_chatdata(request):
-
     if request.method == 'POST':
 
         print("data: ", request.data)
