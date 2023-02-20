@@ -4,13 +4,14 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError, Error
-
 from .helper import convert_to_localtime
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login, logout
 from datetime import datetime
 from django.utils import timezone
 import pytz
+import json
+import os
 
 
 INITIAL_USER = "INITIAL_USER"
@@ -159,10 +160,22 @@ def history(request):
 
 
 @api_view(['POST'])
-def survey_data(request, user_pk=None):
+def survey_data(request, user_pk=""):
     if request.method == 'POST':
-        user_pk = int(user_pk)
-        print("user_pk:", user_pk, type(user_pk))
+
+        path = "surveyData"
+        filepath = os.path.join(path, user_pk)
+        print("filepath: ", filepath)
+
+        does_exist = os.path.exists(path)
+        if not does_exist:
+            os.makedirs(path)
+
+        json_object = json.dumps(request.data, indent=4)
+
+        with open(f"{filepath}.json", "w") as outfile:
+            outfile.write(json_object)
+
         return Response(status=status.HTTP_200_OK)
 
 
