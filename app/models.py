@@ -15,6 +15,7 @@ class UserInfo(models.Model):
     last_bot_message_pk = models.IntegerField(default=-1)
     dialog_style = models.CharField("Dialog Style", max_length=60, null=True)
     completed_survey = models.BooleanField("Completed Survey", default=False)
+    invited_by = models.ForeignKey(User, related_name="invited", on_delete=models.SET_NULL, null=True, blank=True, default=None)
 
     def __str__(self):
         return f"[{self.pk}] Userinfo for {self.user} ({self.email})"

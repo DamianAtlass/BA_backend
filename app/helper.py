@@ -2,6 +2,7 @@ import pytz
 from django.utils import timezone
 import os
 import json
+from .models import User
 
 
 def convert_to_localtime(utctime, format="%H:%M"):
@@ -32,6 +33,7 @@ def save_survey_data(user_pk, data):
         outfile.write(json_object)
 
     return os.path.exists(file_path)
+
 
 
 

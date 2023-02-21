@@ -118,6 +118,20 @@ def accounts(request):
             print(e)
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
+        #set invited by
+        if request.data.get("invitedBy"):
+            try:
+                inviting_user = User.objects.get(username=request.data.get("invitedBy"))
+
+                if not inviting_user.userinfo.completed_survey:
+                    return Response(status=status.HTTP_400_BAD_REQUEST,
+                                    data={"error": "Survey needs to be handed in first!"})
+
+                new_user.userinfo.invited_by = inviting_user
+                new_user.userinfo.save()
+            except User.DoesNotExist as e:
+                print("Error:", e, "inviting user does not exist!")
+
         return Response(status=status.HTTP_200_OK)
 
     if request.method == 'DELETE':
@@ -173,7 +187,7 @@ def survey_data(request, user_pk=""):
 
         # check if surevy has been handed in already
         if not user.userinfo.completed_survey:
-            
+
             success = save_survey_data(user_pk, request.data)
             user.userinfo.completed_survey = success
             user.userinfo.save()
@@ -267,3 +281,4 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
             bot_response = bot_response.next.all()[0]
         else:
             return bot_response, bot_responses
+
