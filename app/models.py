@@ -14,9 +14,10 @@ class UserInfo(models.Model):
     verified = models.BooleanField("Verified", default=False)
     last_bot_message_pk = models.IntegerField(default=-1)
     dialog_style = models.CharField("Dialog Style", max_length=60, null=True)
+    completed_survey = models.BooleanField("Completed Survey", default=False)
 
     def __str__(self):
-        return f"[{self.pk}] Userinfo for {self.user} ({self.alias})"
+        return f"[{self.pk}] Userinfo for {self.user} ({self.email})"
 
     class Meta:
         verbose_name = "UserInfo"
@@ -33,6 +34,10 @@ class GraphMessage(models.Model):
     def __str__(self):
         return f"[{self.pk}] {self.author}: '{self.content}'"
 
+    class Meta:
+        verbose_name = "GraphMessage"
+        verbose_name_plural = "GraphMessages"
+
 
 class History(models.Model):
     user = models.OneToOneField(User, related_name="history",  on_delete=models.CASCADE, null=True)
@@ -40,6 +45,10 @@ class History(models.Model):
 
     def __str__(self):
         return f"History between {self.bot_type} and {self.user.username}"
+
+    class Meta:
+        verbose_name = "History"
+        verbose_name_plural = "Histories"
 
 
 class HistoryMessage(models.Model):
@@ -50,3 +59,7 @@ class HistoryMessage(models.Model):
 
     def __str__(self):
         return f"[{self.pk}] ({self.order_id}) {convert_to_localtime(self.date, format='%d.%m. %H:%M:%S')} - {self.graph_message.author}: {self.graph_message.content}"
+
+    class Meta:
+        verbose_name = "HistoryMessage"
+        verbose_name_plural = "HistoryMessages"

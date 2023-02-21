@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError, Error
-from .helper import convert_to_localtime
+from .helper import convert_to_localtime, save_survey_data
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login, logout
 from datetime import datetime
@@ -26,6 +26,8 @@ DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 def ok(request, user_pk="default"):
     if request.method == 'GET':
         print(request.data)
+        for user in User.objects.all():
+            print(f"User {user.username}: {user.pk}")
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'POST':
@@ -145,6 +147,7 @@ def history(request):
         user = User.objects.get(username=username)
 
         user.userinfo.last_bot_message_pk = -1
+        user.userinfo.completed_survey = True
         user.userinfo.save()
         try:
             user.history.delete()
@@ -162,21 +165,25 @@ def history(request):
 @api_view(['POST'])
 def survey_data(request, user_pk=""):
     if request.method == 'POST':
+        #check if user exists & if data has already been sent
+        try:
+            user = User.objects.get(pk=int(user_pk))
+        except User.DoesNotExist as e:
+            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
 
-        path = "surveyData"
-        filepath = os.path.join(path, user_pk)
-        print("filepath: ", filepath)
+        # check if surevy has been handed in already
+        if not user.userinfo.completed_survey:
+            
+            success = save_survey_data(user_pk, request.data)
+            user.userinfo.completed_survey = success
+            user.userinfo.save()
 
-        does_exist = os.path.exists(path)
-        if not does_exist:
-            os.makedirs(path)
-
-        json_object = json.dumps(request.data, indent=4)
-
-        with open(f"{filepath}.json", "w") as outfile:
-            outfile.write(json_object)
-
-        return Response(status=status.HTTP_200_OK)
+            if success:
+                return Response(status=status.HTTP_200_OK)
+            else:
+                return Response(status=status.HTTP_404_NOT_FOUND, data={"error": f"{user.username}'s survey data was not saved!"})
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": f"{user.username} handed a survey in already!"})
 
 
 @api_view(['POST'])
