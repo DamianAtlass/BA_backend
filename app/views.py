@@ -132,7 +132,7 @@ def accounts(request):
             except User.DoesNotExist as e:
                 print("Error:", e, "inviting user does not exist!")
 
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_201_CREATED)
 
     if request.method == 'DELETE':
         print(request.data)
@@ -176,7 +176,7 @@ def history(request):
         return Response(status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
+@api_view(['POST', 'DELETE'])
 def survey_data(request, user_pk=""):
     if request.method == 'POST':
         #check if user exists & if data has already been sent
@@ -185,7 +185,7 @@ def survey_data(request, user_pk=""):
         except User.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
 
-        # check if surevy has been handed in already
+        # check if survey has been handed in already
         if not user.userinfo.completed_survey:
 
             success = save_survey_data(user_pk, request.data)
@@ -195,9 +195,24 @@ def survey_data(request, user_pk=""):
             if success:
                 return Response(status=status.HTTP_200_OK)
             else:
-                return Response(status=status.HTTP_404_NOT_FOUND, data={"error": f"{user.username}'s survey data was not saved!"})
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": f"{user.username}'s survey data was not saved!"})
         else:
-            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": f"{user.username} handed a survey in already!"})
+            return Response(status=status.HTTP_403_FORBIDDEN, data={"error": f"{user.username} handed a survey in already!"})
+
+    if request.method == 'DELETE':
+
+        try:
+            user = User.objects.get(pk=int(user_pk))
+        except User.DoesNotExist as e:
+            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
+
+        user.userinfo.completed_survey = False
+        user.userinfo.save()
+
+        return Response(status=status.HTTP_200_OK)
+
+
+
 
 
 @api_view(['POST'])
