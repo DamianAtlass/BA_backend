@@ -14,6 +14,7 @@ class UserInfo(models.Model):
     verified = models.BooleanField("Verified", default=False)
     last_bot_message_pk = models.IntegerField(default=-1)
     dialog_style = models.CharField("Dialog Style", max_length=60, null=True)
+    completed_dialog = models.BooleanField("Completed Dialog", default=False)
     completed_survey = models.BooleanField("Completed Survey", default=False)
     invited_by = models.ForeignKey(User, related_name="invited", on_delete=models.SET_NULL, null=True, blank=True, default=None)
 

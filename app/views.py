@@ -207,6 +207,7 @@ def survey_data(request, user_pk=""):
             return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
 
         user.userinfo.completed_survey = False
+        user.userinfo.completed_dialog = False
         user.userinfo.save()
 
         return Response(status=status.HTTP_200_OK)
@@ -292,8 +293,16 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         # remember point in conversation
         user.userinfo.last_bot_message_pk = bot_response.pk
         user.userinfo.save()
-        if not bot_response.is_end and not bot_response.next.all()[0].author == "USER": #TODO make is_bot() function
-            bot_response = bot_response.next.all()[0]
-        else:
+
+        # if not last node and next != usernode
+        if bot_response.is_end:
+            print("DIALOG FINISHED")
+            user.userinfo.completed_dialog = True
+            user.userinfo.save()
             return bot_response, bot_responses
+        else:
+            if bot_response.next.all()[0].author == "USER":
+                return bot_response, bot_responses
+            else:
+                bot_response = bot_response.next.all()[0]
 
