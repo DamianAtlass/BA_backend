@@ -153,6 +153,23 @@ def accounts(request):
                 return Response(status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+def invite(request, user_pk=""):
+    if request.method == 'GET':
+        print("enter function")
+        user_pk = int(user_pk)
+
+        try:
+            inviting_user = User.objects.get(pk=user_pk)
+            print("found user")
+            return Response(status=status.HTTP_200_OK, data={"inviting_user": inviting_user.username})
+        except User.DoesNotExist as e:
+            print("didnt found user")
+            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
+
+
+
+
 @api_view(['DELETE'])
 def history(request):
     if request.method == 'DELETE':
