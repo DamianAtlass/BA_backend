@@ -28,5 +28,5 @@ urlpatterns = [
     re_path(r'api/surveydata/(?P<user_pk>\d{3})/$', views.survey_data),
     re_path("api/getchatdata/", views.get_chatdata),
     re_path(r"api/invite/(?P<user_pk>\d{3})/$", views.invite),
-    re_path(r"api/confirmemail/", views.confirmemail),
+    re_path(r"api/confirmemail/", views.confirme_mail),
 ]

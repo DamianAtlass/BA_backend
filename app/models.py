@@ -16,6 +16,7 @@ class UserInfo(models.Model):
     dialog_style = models.CharField("Dialog Style", max_length=60, null=True)
     completed_dialog = models.BooleanField("Completed Dialog", default=False)
     completed_survey = models.BooleanField("Completed Survey", default=False)
+    verification_code = models.IntegerField("Verification Code", default=None, null=True, blank=True)
     invited_by = models.ForeignKey(User, related_name="invited", on_delete=models.SET_NULL, null=True, blank=True, default=None)
 
     def __str__(self):

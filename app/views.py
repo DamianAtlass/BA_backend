@@ -9,6 +9,7 @@ from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login, logout
 from datetime import datetime
 from django.core.mail import send_mail
+import random
 
 from django.utils import timezone
 import pytz
@@ -57,23 +58,52 @@ def login(request):
         try:
             User.objects.get(username=username)
         except User.DoesNotExist as e:
-            return Response(status=status.HTTP_401_UNAUTHORIZED,
+            return Response(status=status.HTTP_404_NOT_FOUND,
                             data={
                                 "error-message": "Diese Email ist nicht in der Datenbank.",
                                 "error": "USER_NOT_FOUND",
                             })
 
-        user = authenticate(request, username=username, password=password)
+        authenticated_user = authenticate(request, username=username, password=password)
 
-        if user is not None:
-            django_login(request, user)
-            return Response(status=status.HTTP_200_OK, data={
-                "success-message": f"Nutzer {user.username} erfolgreich eingeloggt ({user.is_authenticated})",
-                "success": "LOGIN_SUCCESS",
-                "dialog_style": user.userinfo.dialog_style,
-                "username": user.username,
-                "user_pk": user.pk,
-            })
+        if authenticated_user is not None:
+            django_login(request, authenticated_user)
+
+            if authenticated_user.userinfo.verified:
+                return Response(status=status.HTTP_200_OK, data={
+                    "success-message": f"Nutzer {authenticated_user.username} erfolgreich eingeloggt ({authenticated_user.is_authenticated})",
+                    "success": "LOGIN_SUCCESS",
+                    "dialog_style": authenticated_user.userinfo.dialog_style,
+                    "username": authenticated_user.username,
+                    "user_pk": authenticated_user.pk,
+                })
+            else:
+                verification_code = request.data.get("verification_code")
+                if verification_code:
+                    verification_code = int(verification_code)
+                    if verification_code == authenticated_user.userinfo.verification_code:
+                        authenticated_user.userinfo.verified = True
+                        authenticated_user.userinfo.save()
+                        return Response(status=status.HTTP_200_OK, data={
+                            "success-message": f"Nutzer {authenticated_user.username} erfolgreich eingeloggt ({authenticated_user.is_authenticated})",
+                            "success": "LOGIN_SUCCESS",
+                            "dialog_style": authenticated_user.userinfo.dialog_style,
+                            "username": authenticated_user.username,
+                            "user_pk": authenticated_user.pk,
+                        })
+                    else:
+                        return Response(status=status.HTTP_401_UNAUTHORIZED,
+                                        data={
+                                            "error-message": f"Wrong verification code.",
+                                            "error": "WRONG_VERIFICATION_CODE"
+                                        })
+
+                else:
+                    return Response(status=status.HTTP_401_UNAUTHORIZED,
+                                    data={
+                                        "error-message": f"Please enter your verification code that was sent to {authenticated_user.userinfo.email}.",
+                                        "error": "VERIFICATION_NECESSARY"
+                                    })
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED,
                             data={
@@ -86,53 +116,69 @@ def login(request):
 def accounts(request):
     if request.method == 'POST':
         print(request.data)
-        # create user
+
+        ### create user
         try:
-            new_user = User.objects.create_user(username=request.data.get("username"), password=request.data.get("password"))
+            new_user = User.objects.create_user(username=request.data.get("username"),
+                                                password=request.data.get("password"))
             new_user.save()
-
-            dialog_style = ""
-            #TODO: calculate dialog style randomly
-            match request.data.get("email"):
-                case "alice@mail.com":
-                    dialog_style = DIALOG_STYLE_ONE_ON_ONE
-                case "ben@mail.com":
-                    dialog_style = DIALOG_STYLE_COLORED_BUBBLES
-                case "christian@mail.de":
-                    dialog_style = DIALOG_STYLE_COLORED_BUBBLES
-                case "daniel@mail.de":
-                    dialog_style = DIALOG_STYLE_COLORED_BUBBLES
-
-            userinfo = UserInfo(user=new_user, email=request.data.get("email"), dialog_style=dialog_style)
-            userinfo.save()
-
             print(f"User {new_user.username} created!")
 
         except IntegrityError as e:
             print(e)
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
-        # create history
-        try:
-            new_history = History(user=new_user, bot_type="BOT")
-            new_history.save()
-        except Error as e:
-            print(e)
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
+        ### create userinfo
+        #TODO: calculate dialog style randomly
+        match request.data.get("email"):
+            case "alice@mail.com":
+                dialog_style = DIALOG_STYLE_ONE_ON_ONE
+            case "ben@mail.com":
+                dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+            case "christian@mail.de":
+                dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+            case "daniel@mail.de":
+                dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+            case _:
+                dialog_style = DIALOG_STYLE_ONE_ON_ONE
 
-        #set invited by
+        userinfo = UserInfo(user=new_user,
+                            email=request.data.get("email"),
+                            dialog_style=dialog_style,
+                            verification_code=random.randint(100000, 999999))
+        userinfo.save()
+
+        ### create history
+        #TODO remove bot_type
+        new_history = History(user=new_user, bot_type="BOT")
+        new_history.save()
+
+
+        ### set invited by
         if request.data.get("invitedBy"):
             try:
                 inviting_user = User.objects.get(username=request.data.get("invitedBy"))
 
                 if not inviting_user.userinfo.completed_survey:
                     return Response(status=status.HTTP_400_BAD_REQUEST,
-                                    data={"error": "Survey needs to be handed in first!"})
+                                    data={"error": "Inviting user needs to hand in the survey first!"})
 
                 new_user.userinfo.invited_by = inviting_user
                 new_user.userinfo.save()
             except User.DoesNotExist as e:
-                print("Error:", e, "inviting user does not exist!")
+                print("Error:", e, "Inviting user does not exist! Bad link!")
+
+        # try to send verification email
+        try:
+            result = send_confirmation_email(new_user)
+
+            #sending process was not successfull
+            if not result == 1:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": "Sending email went wrong!"})
+
+        #TODO specify if an exception ever occurs
+        except Exception as e:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
         return Response(status=status.HTTP_201_CREATED)
 
@@ -232,21 +278,32 @@ def survey_data(request, user_pk=""):
         return Response(status=status.HTTP_200_OK)
 
 
-@api_view(['POST', 'DELETE'])
-def confirmemail(request):
-    if request.method == 'POST':
-        print("send email:")
-        result = send_mail(
-            subject='Subject here',
-            message='Here is the message.',
-            from_email=None, #django will use EMAIL_HOST_USER anyway
-            recipient_list=['gqd04726@nezid.com'],
-            fail_silently=False,
-        )
+def send_confirmation_email(user):
+    print("send email")
 
-        print("result:", result)
+    message = f"Thank you for taking part in this study, {user.username}! Enter this code to validate your e-mail adress: {user.userinfo.verification_code}"
+    return send_mail(
+        subject='Confirm your email!',
+        message=message,
+        from_email=None, #django will use EMAIL_HOST_USER anyway
+        recipient_list=[user.userinfo.email],
+        fail_silently=False,
+    )
 
-        return Response(status=status.HTTP_200_OK)
+@api_view(['GET', 'POST'])
+def confirme_mail(request):
+    if request.method == 'GET':
+        try: #to get user
+            user = User.objects.get(username=request.data.get("username"))
+
+
+
+        except User.DoesNotExist as e:
+            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
+
+
+
+
 
 
 
