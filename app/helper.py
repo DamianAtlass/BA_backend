@@ -1,10 +1,10 @@
 import pytz
+from django.core.mail import send_mail
 from django.utils import timezone
 import os
 import json
-from .models import User
 from datetime import datetime
-
+from .models import User
 
 
 def convert_to_localtime(utctime, format="%H:%M"):
@@ -42,7 +42,14 @@ def save_survey_data(user_pk, data):
     return os.path.exists(file_path)
 
 
+def send_confirmation_email(user):
+    print("send email")
 
-
-
-
+    message = f"Thank you for taking part in this study, {user.username}! Enter this code to validate your e-mail adress while logging in: {user.userinfo.verification_code}"
+    return send_mail(
+        subject='Confirm your email!',
+        message=message,
+        from_email=None, #django will use EMAIL_HOST_USER anyway
+        recipient_list=[user.userinfo.email],
+        fail_silently=False,
+    )

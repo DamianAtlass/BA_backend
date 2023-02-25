@@ -1,21 +1,13 @@
-from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
-from django.db.utils import IntegrityError, Error
-from .helper import convert_to_localtime, save_survey_data
+from django.db.utils import IntegrityError
+from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
 from .models import UserInfo, History, GraphMessage, HistoryMessage
-from django.contrib.auth import authenticate, login as django_login, logout
+from django.contrib.auth import authenticate, login as django_login
 from datetime import datetime
-from django.core.mail import send_mail
 import random
-
-from django.utils import timezone
-import pytz
-import json
-import os
-
 
 INITIAL_USER = "INITIAL_USER"
 # dialog styles
@@ -117,6 +109,16 @@ def accounts(request):
     if request.method == 'POST':
         print(request.data)
 
+        ###check if email exists in userinfo before actuall user is created
+
+        try:
+            UserInfo.objects.get(email=request.data.get("email"))
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            data={"error": "EMAIL_NOT_UNIQUE",
+                                  "error-message": "Email is already in use!"})
+        except UserInfo.DoesNotExist as e:
+            pass
+
         ### create user
         try:
             new_user = User.objects.create_user(username=request.data.get("username"),
@@ -126,7 +128,9 @@ def accounts(request):
 
         except IntegrityError as e:
             print(e)
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            data={"error": str(e),
+                                  "error-message": "Username already taken!"})
 
         ### create userinfo
         #TODO: calculate dialog style randomly
@@ -165,7 +169,7 @@ def accounts(request):
                 new_user.userinfo.invited_by = inviting_user
                 new_user.userinfo.save()
             except User.DoesNotExist as e:
-                print("Error:", e, "Inviting user does not exist! Bad link!")
+                print("Error:", e, "Inviting user does not exist!")
 
         # try to send verification email
         try:
@@ -179,7 +183,9 @@ def accounts(request):
         except Exception as e:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_201_CREATED,
+                        data={"success-message": (f"Account created! An email was sent to {new_user.userinfo.email}. "
+                                                  "You can close this window now.")})
 
     if request.method == 'DELETE':
         print(request.data)
@@ -212,7 +218,9 @@ def invite(request, user_pk=""):
             return Response(status=status.HTTP_200_OK, data={"inviting_user": inviting_user.username})
         except User.DoesNotExist as e:
             print("didnt found user")
-            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={"error": str(e),
+                                  "error-message": "Inviting user does not exist! Bad link!"})
 
 
 
@@ -277,26 +285,12 @@ def survey_data(request, user_pk=""):
         return Response(status=status.HTTP_200_OK)
 
 
-def send_confirmation_email(user):
-    print("send email")
-
-    message = f"Thank you for taking part in this study, {user.username}! Enter this code to validate your e-mail adress: {user.userinfo.verification_code}"
-    return send_mail(
-        subject='Confirm your email!',
-        message=message,
-        from_email=None, #django will use EMAIL_HOST_USER anyway
-        recipient_list=[user.userinfo.email],
-        fail_silently=False,
-    )
-
 @api_view(['GET', 'POST'])
 def confirme_mail(request):
     if request.method == 'GET':
         try: #to get user
             user = User.objects.get(username=request.data.get("username"))
-
-
-
+            send_confirmation_email(user)
         except User.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
 
