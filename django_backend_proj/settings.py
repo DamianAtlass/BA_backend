@@ -142,3 +142,11 @@ MIDDLEWARE += [          # locale middleware
 LANGUAGES = (            # supported languages
     ('en', 'English'),
 )
+
+# EMAIL STUFF
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'remodisys@gmail.com'
+EMAIL_HOST_PASSWORD = 'tairexzayonbmzwu'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True

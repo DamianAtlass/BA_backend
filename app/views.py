@@ -8,6 +8,8 @@ from .helper import convert_to_localtime, save_survey_data
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login, logout
 from datetime import datetime
+from django.core.mail import send_mail
+
 from django.utils import timezone
 import pytz
 import json
@@ -229,6 +231,22 @@ def survey_data(request, user_pk=""):
 
         return Response(status=status.HTTP_200_OK)
 
+
+@api_view(['POST', 'DELETE'])
+def confirmemail(request):
+    if request.method == 'POST':
+        print("send email:")
+        result = send_mail(
+            subject='Subject here',
+            message='Here is the message.',
+            from_email=None, #django will use EMAIL_HOST_USER anyway
+            recipient_list=['gqd04726@nezid.com'],
+            fail_silently=False,
+        )
+
+        print("result:", result)
+
+        return Response(status=status.HTTP_200_OK)
 
 
 
