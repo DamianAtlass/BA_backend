@@ -44,10 +44,9 @@ class GraphMessage(models.Model):
 
 class History(models.Model):
     user = models.OneToOneField(User, related_name="history",  on_delete=models.CASCADE, null=True)
-    bot_type = models.CharField(max_length=25, null=True)
 
     def __str__(self):
-        return f"History between {self.bot_type} and {self.user.username}"
+        return f"{self.user.username}'s History"
 
     class Meta:
         verbose_name = "History"

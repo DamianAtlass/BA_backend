@@ -149,8 +149,7 @@ def accounts(request):
         userinfo.save()
 
         ### create history
-        #TODO remove bot_type
-        new_history = History(user=new_user, bot_type="BOT")
+        new_history = History(user=new_user)
         new_history.save()
 
 
@@ -235,7 +234,7 @@ def history(request):
             pass
         else:
             print(f"History of {username} was successfully deleted!")
-        new_history = History(user=User.objects.get(username=username), bot_type="BOT")
+        new_history = History(user=User.objects.get(username=username))
         new_history.save()
 
         return Response(status=status.HTTP_200_OK)
