@@ -63,11 +63,12 @@ def login(request):
 
             if authenticated_user.userinfo.verified:
                 return Response(status=status.HTTP_200_OK, data={
-                    "success-message": f"Nutzer {authenticated_user.username} erfolgreich eingeloggt ({authenticated_user.is_authenticated})",
                     "success": "LOGIN_SUCCESS",
                     "dialog_style": authenticated_user.userinfo.dialog_style,
                     "username": authenticated_user.username,
                     "user_pk": authenticated_user.pk,
+                    "completed_dialog": authenticated_user.userinfo.completed_dialog,
+                    "completed_survey": authenticated_user.userinfo.completed_survey,
                 })
             else:
                 verification_code = request.data.get("verification_code")
@@ -77,11 +78,12 @@ def login(request):
                         authenticated_user.userinfo.verified = True
                         authenticated_user.userinfo.save()
                         return Response(status=status.HTTP_200_OK, data={
-                            "success-message": f"Nutzer {authenticated_user.username} erfolgreich eingeloggt ({authenticated_user.is_authenticated})",
                             "success": "LOGIN_SUCCESS",
                             "dialog_style": authenticated_user.userinfo.dialog_style,
                             "username": authenticated_user.username,
                             "user_pk": authenticated_user.pk,
+                            "completed_dialog": authenticated_user.userinfo.completed_dialog,
+                            "completed_survey": authenticated_user.userinfo.completed_survey,
                         })
                     else:
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
@@ -372,7 +374,7 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         new_history_message.save()
         bot_responses.append({"author": bot_response.author,
                               "content": bot_response.content,
-                              "date": convert_to_localtime(datetime.now()),
+                              "date": datetime.now().strftime("%H:%M"),
                               "dialogIsComplete": bot_response.is_end})
 
         # remember point in conversation
