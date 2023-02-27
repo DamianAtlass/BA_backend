@@ -41,11 +41,22 @@ def save_survey_data(user_pk, data):
 
     return os.path.exists(file_path)
 
-
+def is_testing_user(user):
+    if user.userinfo.email == "alice@mail.com"\
+            or user.userinfo.email == "ben@mail.com"\
+            or user.userinfo.email == "christian@mail.de"\
+            or user.userinfo.email == "daniel@mail.de":
+        return True
+    else:
+        return False
 def send_confirmation_email(user):
     print("send email")
 
     message = f"Thank you for taking part in this study, {user.username}! Enter this code to validate your e-mail adress while logging in: {user.userinfo.verification_code}"
+
+    if is_testing_user(user):
+        return 1
+
     return send_mail(
         subject='Confirm your email!',
         message=message,

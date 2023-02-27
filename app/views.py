@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
-from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
+from .helper import convert_to_localtime, save_survey_data, send_confirmation_email, is_testing_user
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
 from datetime import datetime
@@ -135,23 +135,30 @@ def accounts(request):
                                   "error-message": "Username already taken!"})
 
         ### create userinfo
-        #TODO: calculate dialog style randomly
+        #TODO: remove partly(!) when live
         match request.data.get("email"):
             case "alice@mail.com":
                 dialog_style = DIALOG_STYLE_ONE_ON_ONE
             case "ben@mail.com":
                 dialog_style = DIALOG_STYLE_COLORED_BUBBLES
             case "christian@mail.de":
-                dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+                dialog_style = DIALOG_STYLE_CLASSIC_GROUP
             case "daniel@mail.de":
-                dialog_style = DIALOG_STYLE_COLORED_BUBBLES
+                dialog_style = DIALOG_STYLE_PICTURE
             case _:
-                dialog_style = DIALOG_STYLE_ONE_ON_ONE
+                dialog_style = random.choice([DIALOG_STYLE_ONE_ON_ONE, DIALOG_STYLE_COLORED_BUBBLES,
+                                              DIALOG_STYLE_CLASSIC_GROUP, DIALOG_STYLE_PICTURE])
+
+        #TODO: remove when live
+        if is_testing_user(new_user):
+            verification_code = 123456
+        else:
+            verification_code = random.randint(100000, 999999)
 
         userinfo = UserInfo(user=new_user,
                             email=request.data.get("email"),
                             dialog_style=dialog_style,
-                            verification_code=random.randint(100000, 999999))
+                            verification_code=verification_code)
         userinfo.save()
 
         ### create history
