@@ -9,24 +9,22 @@ from django.contrib.auth import authenticate, login as django_login
 from datetime import datetime
 import random
 
-INITIAL_USER = "INITIAL_USER"
 # dialog styles
 DIALOG_STYLE_ONE_ON_ONE = "ONE_ON_ONE"
 DIALOG_STYLE_COLORED_BUBBLES = "COLORED_BUBBLES"
 DIALOG_STYLE_CLASSIC_GROUP = "CLASSIC_GROUP"
 DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
+DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
 
 @api_view(['GET', 'POST'])
-def ok(request, user_pk="default"):
+def ok(request):
     if request.method == 'GET':
-        print(request.data)
-        for user in User.objects.all():
-            print(f"User {user.username}: {user.pk}")
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'POST':
-        print(user_pk)
+        for user in User.objects.all():
+            print(f"User {user.username}: {user.pk}")
         print(request.data)
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
@@ -45,18 +43,17 @@ def login(request):
     if request.method == 'POST':
         print(request.data)
         username = request.data.get("username")
-        password = request.data.get("password")
 
         try:
             User.objects.get(username=username)
         except User.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={
-                                "error-message": "Diese Email ist nicht in der Datenbank.",
+                                "error-message": "Dieser Nutzer ist nicht in der Datenbank.",
                                 "error": "USER_NOT_FOUND",
                             })
 
-        authenticated_user = authenticate(request, username=username, password=password)
+        authenticated_user = authenticate(request, username=username, password=DEFAULT_PASSWORD)
 
         if authenticated_user is not None:
             django_login(request, authenticated_user)
@@ -124,7 +121,7 @@ def accounts(request):
         ### create user
         try:
             new_user = User.objects.create_user(username=request.data.get("username"),
-                                                password=request.data.get("password"))
+                                                password=request.data.get(DEFAULT_PASSWORD))
             new_user.save()
             print(f"User {new_user.username} created!")
 
@@ -242,7 +239,8 @@ def history(request):
         user = User.objects.get(username=username)
 
         user.userinfo.last_bot_message_pk = -1
-        user.userinfo.completed_survey = True
+        user.userinfo.completed_survey = False
+        user.userinfo.completed_dialog = False
         user.userinfo.save()
         try:
             user.history.delete()
@@ -318,8 +316,6 @@ def get_chatdata(request):
         user_response_pk = request.data.get("user_response_pk", None)
         username = request.data.get("username", None)
 
-        if username == INITIAL_USER:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
 
         user = User.objects.get(username=username)
         history = []
