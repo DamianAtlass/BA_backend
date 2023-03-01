@@ -105,6 +105,7 @@ def login(request):
 
 @api_view(['POST', 'DELETE'])
 def accounts(request):
+
     if request.method == 'POST':
         print(request.data)
 
@@ -229,6 +230,18 @@ def invite(request, user_pk=""):
                                   "error-message": "Inviting user does not exist! Bad link!"})
 
 
+@api_view(['GET'])
+def inv(request, user_pk=""):
+    if request.method == 'GET':
+        user_pk = int(user_pk)
+        user = User.objects.get(pk=user_pk)
+        print("here")
+        invited_users = UserInfo.objects.filter(invited_by=user)
+
+        #m = map(lambda x: x.user.username, invited_users)
+        #map(lambda x: print(x), m)
+
+        return Response(status=status.HTTP_200_OK, data={"invited_users_len": len(invited_users)})
 
 
 @api_view(['DELETE'])
