@@ -17,7 +17,7 @@ DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET', 'POST', 'DELETE'])
 def ok(request):
     if request.method == 'GET':
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
@@ -26,6 +26,12 @@ def ok(request):
         for user in User.objects.all():
             print(f"User {user.username}: {user.pk}")
         print(request.data)
+        return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+
+    if request.method == 'DELETE':
+        alice = User.objects.get(username="Alice")
+        print("type:", type(alice))
+        print("score: ", get_user_score(user=alice))
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
 
@@ -235,13 +241,16 @@ def inv(request, user_pk=""):
     if request.method == 'GET':
         user_pk = int(user_pk)
         user = User.objects.get(pk=user_pk)
-        print("here")
         invited_users = UserInfo.objects.filter(invited_by=user)
 
         #m = map(lambda x: x.user.username, invited_users)
         #map(lambda x: print(x), m)
 
-        return Response(status=status.HTTP_200_OK, data={"invited_users_len": len(invited_users)})
+        user_score = get_user_score(user)
+
+        return Response(status=status.HTTP_200_OK, data={
+            "invited_users_len": len(invited_users),
+            "user_score": user_score})
 
 
 @api_view(['DELETE'])
@@ -408,4 +417,14 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
                 return bot_response, bot_responses
             else:
                 bot_response = bot_response.next.all()[0]
+
+
+def get_user_score(user=None, weight=1):
+    invited_users_userinfo = UserInfo.objects.filter(invited_by=user)
+
+    sum = 0
+    for _userinfo in invited_users_userinfo:
+        if _userinfo.completed_survey:
+            sum += get_user_score(user=_userinfo.user, weight=weight/2)
+    return sum + weight
 

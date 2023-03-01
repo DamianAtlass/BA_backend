@@ -65,3 +65,5 @@ class HistoryMessage(models.Model):
     class Meta:
         verbose_name = "HistoryMessage"
         verbose_name_plural = "HistoryMessages"
+
+

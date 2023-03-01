@@ -4,7 +4,6 @@ from django.utils import timezone
 import os
 import json
 from datetime import datetime
-from .models import User
 
 
 def convert_to_localtime(utctime, format="%H:%M"):
@@ -49,6 +48,8 @@ def is_testing_user(user):
         return True
     else:
         return False
+
+
 def send_confirmation_email(user):
     print("send email")
 
@@ -64,3 +65,6 @@ def send_confirmation_email(user):
         recipient_list=[user.userinfo.email],
         fail_silently=False,
     )
+
+
+
