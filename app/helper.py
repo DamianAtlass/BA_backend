@@ -30,7 +30,7 @@ def save_survey_data(user_pk, data):
     # if file exists, add _new (for debugging), there should never be more than 1 file of a participant
     if os.path.exists(file_path):
         first_part = file_path.split(".")[0]
-        file_path = f"{first_part}_{convert_to_localtime(datetime.now(), format='%H-%M-%S')}.json"
+        file_path = f"{first_part}_{datetime.now().strftime('%H_%M')}.json"
 
     print(file_path)
     json_object = json.dumps(data, indent=4)
