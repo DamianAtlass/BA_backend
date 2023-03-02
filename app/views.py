@@ -4,7 +4,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
 
-from .extended_helper import get_user_score, get_bot_messages
+from .extended_helper import get_user_score, get_bot_messages, write_messages
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email, is_testing_user
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
@@ -30,9 +30,9 @@ def ok(request):
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'DELETE':
-        alice = User.objects.get(username="Alice")
-        print("type:", type(alice))
-        print("score: ", get_user_score(user=alice))
+
+        write_messages()
+
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
 
@@ -365,10 +365,10 @@ def get_chatdata(request):
             else:
                 print("HISTORY, user returned to conversation")
                 history_messages = user.history.messages.all().order_by('order_id')
-                for m in history_messages:
-                    history.append({"author": m.graph_message.author,
-                                    "content": m.graph_message.content,
-                                    "date": convert_to_localtime(m.date)})
+                for _history_message in history_messages:
+                    history.append({"author": _history_message.graph_message.author,
+                                    "content": _history_message.graph_message.content,
+                                    "date": convert_to_localtime(_history_message.date)})
                 last_bot_response = GraphMessage.objects.get(pk=user.userinfo.last_bot_message_pk)
 
         # return users' choices

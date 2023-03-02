@@ -35,7 +35,7 @@ def save_survey_data(user_pk, data):
     print(file_path)
     json_object = json.dumps(data, indent=4)
     print(json_object)
-    with open(f"{file_path}", "w") as outfile:
+    with open(f"{file_path}", "w", encoding='utf-8') as outfile:
         outfile.write(json_object)
 
     return os.path.exists(file_path)
@@ -65,6 +65,4 @@ def send_confirmation_email(user):
         recipient_list=[user.userinfo.email],
         fail_silently=False,
     )
-
-
 

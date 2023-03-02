@@ -24,3 +24,4 @@ django_backend_proj/__pycache__/wsgi.cpython-310.pyc
 app/migrations/__pycache__/
 app/__pycache__/
 surveyData/
+log/
