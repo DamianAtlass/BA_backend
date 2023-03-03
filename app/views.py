@@ -4,6 +4,7 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
 from .env import ADMIN_USERNAME, ADMIN_PASSWORD
+from rest_framework.authtoken.models import Token
 
 from .extended_helper import get_user_score, get_bot_messages, write_messages
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email, is_testing_user
@@ -44,6 +45,7 @@ def createadmin(request):
     superuser = User.objects.create_superuser(ADMIN_USERNAME, "admin@admin.com", ADMIN_PASSWORD)
     superuser.save()
     print("Created admin")
+    token, created = Token.objects.get_or_create(user=superuser)
     return Response(status=status.HTTP_200_OK)
 
 
@@ -132,12 +134,17 @@ def adminlogin(request):
 
         authenticated_user = authenticate(request, username=username, password=password)
 
+        token, created = Token.objects.get_or_create(user=authenticated_user)
+        print("here")
+
+
         if authenticated_user is not None:
             django_login(request, authenticated_user)
 
             return Response(status=status.HTTP_200_OK, data={
                 "success": "LOGIN_SUCCESS",
                 "username": authenticated_user.username,
+                "token": token.key
             })
 
         else:
@@ -147,8 +154,13 @@ def adminlogin(request):
                                 "error": "WRONG_CREDENTIALS"
                             })
 
-@api_view(['POST', 'DELETE'])
+@api_view(['GET', 'POST', 'DELETE'])
 def accounts(request):
+    print("request.method", request.method)
+    if request.method == 'GET':
+        print(request.data)
+
+        return Response(status=status.HTTP_200_OK)
 
     if request.method == 'POST':
         print(request.data)
