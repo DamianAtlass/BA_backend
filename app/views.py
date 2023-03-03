@@ -31,7 +31,7 @@ def ok(request):
 
     if request.method == 'DELETE':
 
-        write_messages()
+
 
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
@@ -129,7 +129,7 @@ def accounts(request):
         ### create user
         try:
             new_user = User.objects.create_user(username=request.data.get("username"),
-                                                password=request.data.get(DEFAULT_PASSWORD))
+                                                password=DEFAULT_PASSWORD)
             new_user.save()
             print(f"User {new_user.username} created!")
 
@@ -154,16 +154,10 @@ def accounts(request):
                 dialog_style = random.choice([DIALOG_STYLE_ONE_ON_ONE, DIALOG_STYLE_COLORED_BUBBLES,
                                               DIALOG_STYLE_CLASSIC_GROUP, DIALOG_STYLE_PICTURE])
 
-        #TODO: remove when live
-        if is_testing_user(new_user):
-            verification_code = 123456
-        else:
-            verification_code = random.randint(100000, 999999)
-
         userinfo = UserInfo(user=new_user,
                             email=request.data.get("email"),
                             dialog_style=dialog_style,
-                            verification_code=verification_code)
+                            verification_code=random.randint(100000, 999999))
         userinfo.save()
 
         ### create history
