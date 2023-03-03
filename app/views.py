@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
+from .env import ADMIN_USERNAME, ADMIN_PASSWORD
 
 from .extended_helper import get_user_score, get_bot_messages, write_messages
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email, is_testing_user
@@ -15,6 +16,7 @@ DIALOG_STYLE_ONE_ON_ONE = "ONE_ON_ONE"
 DIALOG_STYLE_COLORED_BUBBLES = "COLORED_BUBBLES"
 DIALOG_STYLE_CLASSIC_GROUP = "CLASSIC_GROUP"
 DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
+
 DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
 
@@ -31,6 +33,7 @@ def ok(request):
 
     if request.method == 'DELETE':
 
+        User.objects.create_user(username="admin", password=DEFAULT_PASSWORD)
 
 
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
@@ -38,7 +41,7 @@ def ok(request):
 
 @api_view(['POST'])
 def createadmin(request):
-    superuser = User.objects.create_superuser("admin", "admin@admin.com", "123admin")
+    superuser = User.objects.create_superuser(ADMIN_USERNAME, "admin@admin.com", ADMIN_PASSWORD)
     superuser.save()
     print("Created admin")
     return Response(status=status.HTTP_200_OK)
@@ -236,7 +239,7 @@ def inv(request, user_pk=""):
     if request.method == 'GET':
         user_pk = int(user_pk)
         user = User.objects.get(pk=user_pk)
-        invited_users = UserInfo.objects.filter(invited_by=user)
+        indirectly_recruited_len = get_user_score(user, 1, 1) - 1  # -1 because you cant recruit yourself
 
         #m = map(lambda x: x.user.username, invited_users)
         #map(lambda x: print(x), m)
@@ -244,7 +247,7 @@ def inv(request, user_pk=""):
         user_score = get_user_score(user)
 
         return Response(status=status.HTTP_200_OK, data={
-            "invited_users_len": len(invited_users),
+            "indirectly_recruited_len": indirectly_recruited_len,
             "user_score": user_score})
 
 
