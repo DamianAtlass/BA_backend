@@ -113,6 +113,40 @@ def login(request):
                             })
 
 
+@api_view(['POST'])
+def adminlogin(request):
+    print("ADMIN LOGIN ATTEMPT")
+    if request.method == 'POST':
+        print(request.data)
+        username = request.data.get("username")
+        password = request.data.get("admin_password")
+
+        try:
+            User.objects.get(username=username)
+        except User.DoesNotExist as e:
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={
+                                "error-message": "Dieser Nutzer ist nicht in der Datenbank.",
+                                "error": "USER_NOT_FOUND",
+                            })
+
+        authenticated_user = authenticate(request, username=username, password=password)
+
+        if authenticated_user is not None:
+            django_login(request, authenticated_user)
+
+            return Response(status=status.HTTP_200_OK, data={
+                "success": "LOGIN_SUCCESS",
+                "username": authenticated_user.username,
+            })
+
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED,
+                            data={
+                                "error-message": "Falsche Admin-Anmeldeinformationen.",
+                                "error": "WRONG_CREDENTIALS"
+                            })
+
 @api_view(['POST', 'DELETE'])
 def accounts(request):
 
