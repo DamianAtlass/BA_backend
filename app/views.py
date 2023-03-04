@@ -134,12 +134,11 @@ def adminlogin(request):
 
         authenticated_user = authenticate(request, username=username, password=password)
 
-        token, created = Token.objects.get_or_create(user=authenticated_user)
-        print("here")
-
 
         if authenticated_user is not None:
             django_login(request, authenticated_user)
+
+            token, created = Token.objects.get_or_create(user=authenticated_user)
 
             return Response(status=status.HTTP_200_OK, data={
                 "success": "LOGIN_SUCCESS",
@@ -154,13 +153,37 @@ def adminlogin(request):
                                 "error": "WRONG_CREDENTIALS"
                             })
 
-@api_view(['GET', 'POST', 'DELETE'])
-def accounts(request):
+
+@api_view(['POST'])
+def getuserdata(request):
     print("request.method", request.method)
-    if request.method == 'GET':
-        print(request.data)
+    if request.method == 'POST':
+        admin = User.objects.get(username=ADMIN_USERNAME)
+
+        token, created = Token.objects.get_or_create(user=admin)
+
+
+
+        if not token.key == request.data.get("token", None):
+            return Response(status=status.HTTP_401_UNAUTHORIZED, data={
+                "error-message": "wrong token"
+            })
+
+        all_userinfos = []
+
+        for user in User.objects.all():
+            if user.is_staff:
+                continue
+            all_userinfos.append(
+                None
+            )
+
 
         return Response(status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'POST', 'DELETE'])
+def accounts(request):
 
     if request.method == 'POST':
         print(request.data)

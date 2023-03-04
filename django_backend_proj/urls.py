@@ -22,6 +22,7 @@ urlpatterns = [
     re_path(r"api/ok/", views.ok),
     re_path(r"api/login/", views.login),
     re_path(r"api/adminlogin/", views.adminlogin),
+    re_path(r"api/admin/getuserdata/", views.getuserdata),
     re_path(r"api/createadmin/", views.createadmin),
     path("api/accounts/", include("django.contrib.auth.urls")),
     re_path("api/accounts/inv/(?P<user_pk>\d{3})/$", views.inv),
