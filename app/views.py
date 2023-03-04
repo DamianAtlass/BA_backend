@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
-from .env import ADMIN_USERNAME, ADMIN_PASSWORD
+from .env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
 from .extended_helper import get_user_score, get_bot_messages, write_messages
@@ -42,7 +42,7 @@ def ok(request):
 
 @api_view(['POST'])
 def createadmin(request):
-    superuser = User.objects.create_superuser(ADMIN_USERNAME, "admin@admin.com", ADMIN_PASSWORD)
+    superuser = User.objects.create_superuser(ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD)
     superuser.save()
     print("Created admin")
     token, created = Token.objects.get_or_create(user=superuser)
@@ -433,8 +433,24 @@ def get_chatdata(request):
         else:
             if user.userinfo.last_bot_message_pk == -1:
                 print("NEW CONVERSATION, user starts a new chat")
-                bot_response = GraphMessage.objects.get(is_start=True)
-                last_bot_response, bot_responses = get_bot_messages(bot_response, user)
+
+                ### choose start message
+                # a user using DIALOG_STYLE_ONE_ON_ONE should only be greeted once
+                # a user using any other dialog style should only be greeted by each module
+                # choose the right start message based on the dialog style
+
+                start_messages = GraphMessage.objects.filter(is_start=True)
+                start_message = None
+                for message in start_messages:
+                    if user.userinfo.dialog_style == DIALOG_STYLE_ONE_ON_ONE and message.next.all()[0].author == "USER":
+                        start_message = message
+                    elif not message.next.all()[0].author == "USER":
+                        start_message = message
+                    else:
+                        #TODO remove sometime, keep here for now
+                        print("Somethings is really wrong if you can read this!")
+
+                last_bot_response, bot_responses = get_bot_messages(start_message, user)
 
             else:
                 print("HISTORY, user returned to conversation")
@@ -458,7 +474,6 @@ def get_chatdata(request):
             "history": history,
             "bot_responses": bot_responses,
             "choices": choices,
-
         }
 
         return Response(status=status.HTTP_200_OK, data=response_data)
