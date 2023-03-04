@@ -156,13 +156,10 @@ def adminlogin(request):
 
 @api_view(['POST'])
 def getuserdata(request):
-    print("request.method", request.method)
     if request.method == 'POST':
         admin = User.objects.get(username=ADMIN_USERNAME)
 
         token, created = Token.objects.get_or_create(user=admin)
-
-
 
         if not token.key == request.data.get("token", None):
             return Response(status=status.HTTP_401_UNAUTHORIZED, data={
@@ -175,11 +172,22 @@ def getuserdata(request):
             if user.is_staff:
                 continue
             all_userinfos.append(
-                None
+                {
+                    "username": user.username,
+                    "email": user.userinfo.email,
+                    "verified": user.userinfo.verified,
+                    "dialog_style": user.userinfo.dialog_style,
+                    "completed_dialog": user.userinfo.completed_dialog,
+                    "completed_survey": user.userinfo.completed_survey,
+                    "user_pk": user.pk,
+                    "invited_by": user.userinfo.invited_by.username if user.userinfo.invited_by else "",
+                    "user_score": get_user_score(user),
+                    "indirectly_recruited_len": get_user_score(user, 1, 1) - 1,  # -1 because you cant recruit yourself
+                    "recruited_len": len(UserInfo.objects.filter(invited_by=user))
+                }
             )
 
-
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK, data={"all_userinfos": all_userinfos})
 
 
 @api_view(['GET', 'POST', 'DELETE'])
