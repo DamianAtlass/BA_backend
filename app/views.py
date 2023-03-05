@@ -3,11 +3,11 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
-from .env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
+from env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
-from .extended_helper import get_user_score, get_bot_messages, write_messages
-from .helper import convert_to_localtime, save_survey_data, send_confirmation_email, is_testing_user
+from .extended_helper import get_user_score, get_bot_messages
+from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
 import random
@@ -40,7 +40,7 @@ def ok(request):
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 def createadmin(request):
     superuser = User.objects.create_superuser(ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD)
     superuser.save()

@@ -25,3 +25,4 @@ app/migrations/__pycache__/
 app/__pycache__/
 surveyData/
 log/
+__pycache__/
