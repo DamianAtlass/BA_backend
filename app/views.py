@@ -104,7 +104,7 @@ def login(request):
                 else:
                     return Response(status=status.HTTP_401_UNAUTHORIZED,
                                     data={
-                                        "error-message": f"Please enter your verification code that was sent to {authenticated_user.userinfo.email}.",
+                                        "error-message": f"Please enter your verification code that was sent to your email adress.",
                                         "error": "VERIFICATION_NECESSARY"
                                     })
         else:
