@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
-from env import EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+from env import EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, ALLOWED_HOSTS
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,10 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-z6+3msqpe3h+=ni#4uc&7_6diu=o9_h)u9uzv3#4jsb1zo%_e8'
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# SECURITY WARNING: don't run with debug turned on in production! #TODO
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ALLOWED_HOSTS
 
 
 # Application definition
