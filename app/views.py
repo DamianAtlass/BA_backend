@@ -331,14 +331,19 @@ def inv(request, user_pk=""):
 @api_view(['DELETE'])
 def history(request):
     if request.method == 'DELETE':
-        print(request.data)
         username = request.data.get("username", None)
         user = User.objects.get(username=username)
+
+        print("Delete history of ", username)
 
         user.userinfo.last_bot_message_pk = -1
         user.userinfo.completed_survey = False
         user.userinfo.completed_dialog = False
         user.userinfo.save()
+        print("user.userinfo.last_bot_message_pk", user.userinfo.last_bot_message_pk)
+        print("user.userinfo.completed_dialog", user.userinfo.completed_dialog)
+        print("user.userinfo.completed_dialog", user.userinfo.completed_dialog)
+
         try:
             user.history.delete()
         except History.DoesNotExist as e:
