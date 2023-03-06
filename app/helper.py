@@ -40,6 +40,7 @@ def save_survey_data(user_pk, data):
 
     return os.path.exists(file_path)
 
+
 def is_testing_user(user):
     if user.userinfo.email == "alice@mail.com"\
             or user.userinfo.email == "ben@mail.com"\
@@ -53,13 +54,13 @@ def is_testing_user(user):
 def send_confirmation_email(user):
     print("send email")
 
-    message = f"Thank you for taking part in this study, {user.username}! Enter this code to validate your e-mail adress while logging in: {user.userinfo.verification_code}"
+    message = f"Danke für deine Teilnahme an dieser Studie, {user.username}! Gib beim Login diesen Code ein, um dich zu verifizieren: {user.userinfo.verification_code}"
 
     if is_testing_user(user):
         return 1
 
     return send_mail(
-        subject='Confirm your email!',
+        subject='Bestätige deine Emailadresse!',
         message=message,
         from_email=None, #django will use EMAIL_HOST_USER anyway
         recipient_list=[user.userinfo.email],

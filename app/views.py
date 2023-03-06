@@ -101,14 +101,14 @@ def login(request):
                     else:
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
                                         data={
-                                            "error-message": f"Wrong verification code.",
+                                            "error-message": "Falscher Verifizierungscode.",
                                             "error": "WRONG_VERIFICATION_CODE"
                                         })
 
                 else:
                     return Response(status=status.HTTP_401_UNAUTHORIZED,
                                     data={
-                                        "error-message": f"Please enter your verification code that was sent to your email adress.",
+                                        "error-message": "Bitte gib den Verifizierungscode an, der an deine Emailadresse geschickt wurde. Sieh ggf. im Spam-Ordner nach.",
                                         "error": "VERIFICATION_NECESSARY"
                                     })
         else:
@@ -206,7 +206,7 @@ def accounts(request):
             UserInfo.objects.get(email=request.data.get("email"))
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             data={"error": "EMAIL_NOT_UNIQUE",
-                                  "error-message": "Email is already in use!"})
+                                  "error-message": "Emailadresse bereits in Benutzung!"})
         except UserInfo.DoesNotExist as e:
             pass
 
@@ -221,7 +221,7 @@ def accounts(request):
             print(e)
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             data={"error": str(e),
-                                  "error-message": "Username already taken!"})
+                                  "error-message": "Benutzername ungültig oder bereits vergeben!"})
 
         ### create userinfo
         #TODO: remove partly(!) when live
@@ -256,12 +256,12 @@ def accounts(request):
 
                 if not inviting_user.userinfo.completed_survey:
                     return Response(status=status.HTTP_400_BAD_REQUEST,
-                                    data={"error": "Inviting user needs to hand in the survey first!"})
+                                    data={"error": "Einladender Nutzer muss Studie vorher ausfüllen!"})
 
                 new_user.userinfo.invited_by = inviting_user
                 new_user.userinfo.save()
             except User.DoesNotExist as e:
-                print("Error:", e, "Inviting user does not exist!")
+                print("Error:", e, "Einladender Nutzer existiert nicht!")
 
         # try to send verification email
         try:
@@ -269,15 +269,15 @@ def accounts(request):
 
             #sending process was not successfull
             if not result == 1:
-                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": "Sending email went wrong!"})
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": "Senden der Email fehlgeschlagen!"})
 
         #TODO specify if an exception ever occurs
         except Exception as e:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
         return Response(status=status.HTTP_201_CREATED,
-                        data={"success-message": (f"Account created! An email was sent to {new_user.userinfo.email}. "
-                                                  "You can close this window now.")})
+                        data={"success-message": (f"Account erstellt! Eine Email wurde an {new_user.userinfo.email} gesendet. "
+                                                  "Du kannst dieses Popup nun schließen.")})
 
     if request.method == 'DELETE':
         print(request.data)
@@ -306,13 +306,12 @@ def invite(request, user_pk=""):
 
         try:
             inviting_user = User.objects.get(pk=user_pk)
-            print("found user")
             return Response(status=status.HTTP_200_OK, data={"inviting_user": inviting_user.username})
         except User.DoesNotExist as e:
             print("didnt found user")
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={"error": str(e),
-                                  "error-message": "Inviting user does not exist! Bad link!"})
+                                  "error-message": "Einladender Nutzer existiert nicht! Link ist kaputt!"})
 
 
 @api_view(['GET'])
@@ -344,9 +343,6 @@ def history(request):
         user.userinfo.completed_survey = False
         user.userinfo.completed_dialog = False
         user.userinfo.save()
-        print("user.userinfo.last_bot_message_pk", user.userinfo.last_bot_message_pk)
-        print("user.userinfo.completed_dialog", user.userinfo.completed_dialog)
-        print("user.userinfo.completed_dialog", user.userinfo.completed_dialog)
 
         try:
             user.history.delete()
@@ -380,9 +376,9 @@ def survey_data(request, user_pk=""):
             if success:
                 return Response(status=status.HTTP_200_OK)
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": f"{user.username}'s survey data was not saved!"})
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error-message": f"{user.username}'s survey data was not saved!"})
         else:
-            return Response(status=status.HTTP_403_FORBIDDEN, data={"error": f"{user.username} handed a survey in already!"})
+            return Response(status=status.HTTP_403_FORBIDDEN, data={"error-message": f"{user.username} handed a survey in already!"})
 
     if request.method == 'DELETE':
 
