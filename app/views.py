@@ -69,16 +69,18 @@ def login(request):
 
         if authenticated_user is not None:
             django_login(request, authenticated_user)
+            data = {
+                "success": "LOGIN_SUCCESS",
+                "dialog_style": authenticated_user.userinfo.dialog_style,
+                "username": authenticated_user.username,
+                "user_pk": authenticated_user.pk,
+                "completed_dialog": authenticated_user.userinfo.completed_dialog,
+                "completed_survey": authenticated_user.userinfo.completed_survey,
+            }
+            print("data: ", data)
 
             if authenticated_user.userinfo.verified:
-                return Response(status=status.HTTP_200_OK, data={
-                    "success": "LOGIN_SUCCESS",
-                    "dialog_style": authenticated_user.userinfo.dialog_style,
-                    "username": authenticated_user.username,
-                    "user_pk": authenticated_user.pk,
-                    "completed_dialog": authenticated_user.userinfo.completed_dialog,
-                    "completed_survey": authenticated_user.userinfo.completed_survey,
-                })
+                return Response(status=status.HTTP_200_OK, data=data)
             else:
                 verification_code = request.data.get("verification_code")
                 if verification_code:
@@ -86,14 +88,16 @@ def login(request):
                     if verification_code == authenticated_user.userinfo.verification_code:
                         authenticated_user.userinfo.verified = True
                         authenticated_user.userinfo.save()
-                        return Response(status=status.HTTP_200_OK, data={
+                        data = {
                             "success": "LOGIN_SUCCESS",
                             "dialog_style": authenticated_user.userinfo.dialog_style,
                             "username": authenticated_user.username,
                             "user_pk": authenticated_user.pk,
                             "completed_dialog": authenticated_user.userinfo.completed_dialog,
                             "completed_survey": authenticated_user.userinfo.completed_survey,
-                        })
+                        }
+                        print("data: ", data)
+                        return Response(status=status.HTTP_200_OK, data=data)
                     else:
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
                                         data={
