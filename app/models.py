@@ -32,6 +32,7 @@ class GraphMessage(models.Model):
     author = models.CharField(max_length=25, null=True)
     next = models.ManyToManyField("self", blank=True, symmetrical=False)
     is_start = models.BooleanField(null=False, default=False)
+    one_on_one = models.BooleanField(null=True, blank=True, default=None)
     is_end = models.BooleanField(null=False, default=False)
 
     def __str__(self):

@@ -448,16 +448,10 @@ def get_chatdata(request):
                 # a user using any other dialog style should only be greeted by each module
                 # choose the right start message based on the dialog style
 
-                start_messages = GraphMessage.objects.filter(is_start=True)
-                start_message = None
-                for message in start_messages:
-                    if user.userinfo.dialog_style == DIALOG_STYLE_ONE_ON_ONE and message.next.all()[0].author == "USER":
-                        start_message = message
-                    elif not message.next.all()[0].author == "USER":
-                        start_message = message
-                    else:
-                        #TODO remove sometime, keep here for now
-                        print("Somethings is really wrong if you can read this!")
+                if user.userinfo.dialog_style == DIALOG_STYLE_ONE_ON_ONE:
+                    start_message = GraphMessage.objects.filter(is_start=True, one_on_one=True)[0]
+                else:
+                    start_message = GraphMessage.objects.filter(is_start=True, one_on_one=False)[0]
 
                 last_bot_response, bot_responses = get_bot_messages(start_message, user)
 
