@@ -6,7 +6,7 @@ from django.db.utils import IntegrityError
 from env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
-from .extended_helper import get_user_score, get_bot_messages
+from .extended_helper import  get_bot_messages
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
@@ -19,6 +19,8 @@ DIALOG_STYLE_CLASSIC_GROUP = "CLASSIC_GROUP"
 DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 
 DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
+
+USERSCORE_MULTIPLIER = 100
 
 
 @api_view(['GET', 'POST', 'DELETE'])
@@ -175,6 +177,15 @@ def getuserdata(request):
         for user in User.objects.all():
             if user.is_staff:
                 continue
+
+            directly_invited_len = len(UserInfo.objects.filter(invited_by=user))
+
+            print("total inv", user.username)
+            total_invited_len = user.userinfo.get_total_invited_len()
+
+            directly_recruited_len = user.userinfo.get_directly_recruited_len()
+            total_recruited_len = user.userinfo.get_directly_recruited_len()
+
             all_userinfos.append(
                 {
                     "username": user.username,
@@ -185,9 +196,11 @@ def getuserdata(request):
                     "completed_survey": user.userinfo.completed_survey,
                     "user_pk": user.pk,
                     "invited_by": user.userinfo.invited_by.username if user.userinfo.invited_by else "",
-                    "user_score": get_user_score(user),
-                    "indirectly_recruited_len": get_user_score(user, 1, 1) - 1,  # -1 because you cant recruit yourself
-                    "recruited_len": len(UserInfo.objects.filter(invited_by=user))
+                    "user_score": user.userinfo.get_user_score() * USERSCORE_MULTIPLIER,
+                    "directly_invited_len": directly_invited_len,
+                    "total_invited_len": total_invited_len,
+                    "directly_recruited_len": directly_recruited_len,
+                    "total_recruited_len": total_recruited_len,
                 }
             )
 
@@ -319,15 +332,14 @@ def inv(request, user_pk=""):
     if request.method == 'GET':
         user_pk = int(user_pk)
         user = User.objects.get(pk=user_pk)
-        indirectly_recruited_len = get_user_score(user, 1, 1) - 1  # -1 because you cant recruit yourself
+        directly_recruited_len = user.userinfo.get_directly_recruited_len()
+        # m = map(lambda x: x.user.username, invited_users)
+        # map(lambda x: print(x), m)
 
-        #m = map(lambda x: x.user.username, invited_users)
-        #map(lambda x: print(x), m)
-
-        user_score = get_user_score(user)
+        user_score = user.userinfo.get_user_score() * USERSCORE_MULTIPLIER
 
         return Response(status=status.HTTP_200_OK, data={
-            "indirectly_recruited_len": indirectly_recruited_len,
+            "directly_recruited_len": directly_recruited_len,
             "user_score": user_score})
 
 

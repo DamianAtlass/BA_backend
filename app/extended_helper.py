@@ -7,17 +7,6 @@ from app.models import UserInfo, GraphMessage, HistoryMessage
 import json
 import csv
 
-
-def get_user_score(user=None, weight=1, factor=2):
-    invited_users_userinfo = UserInfo.objects.filter(invited_by=user)
-
-    sum = 0
-    for _userinfo in invited_users_userinfo:
-        if _userinfo.completed_survey:
-            sum += get_user_score(user=_userinfo.user, weight=weight/factor, factor=factor)
-    return sum + weight
-
-
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
     while True:

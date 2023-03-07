@@ -22,6 +22,53 @@ class UserInfo(models.Model):
     def __str__(self):
         return f"[{self.pk}] Userinfo for {self.user} ({self.email})"
 
+    def get_user_score(self, weight=1, factor=2):
+        if not self.completed_survey:
+            return 0
+
+        user = self.user
+        userinfo_group = UserInfo.objects.filter(invited_by=user)
+
+        sum = 0
+        for _userinfo in userinfo_group:
+            sum += _userinfo.get_user_score(weight=weight/factor, factor=factor)
+        return sum + weight
+
+    def get_directly_invited_len(self):
+        return len(UserInfo.objects.filter(invited_by=self.user))
+
+    def get_total_invited_len(self):
+        return self.total_invited_len_rec() - 1
+
+    def total_invited_len_rec(self):
+        user = self.user
+        print(" invited ", user.username)
+        userinfo_group = UserInfo.objects.filter(invited_by=user)
+
+        sum = 0
+        for _userinfo in userinfo_group:
+            sum += _userinfo.total_invited_len_rec()
+        return sum + 1
+
+    def get_directly_recruited_len(self):
+        return len(UserInfo.objects.filter(invited_by=self.user, completed_survey=True))
+
+    def get_total_recruited_len(self):
+        return self.total_recruited_len_rec() - 1
+
+    #basically the same as get_user_score, just without weights and factor. didn't want to reuse for simplicity
+    def total_recruited_len_rec(self):
+        if not self.completed_survey:
+            return 0
+
+        user = self.user
+        userinfo_group = UserInfo.objects.filter(invited_by=user)
+
+        sum = 0
+        for _userinfo in userinfo_group:
+            sum += _userinfo.total_recruited_len_rec()
+        return sum + 1
+
     class Meta:
         verbose_name = "UserInfo"
         verbose_name_plural = "UserInfos"
