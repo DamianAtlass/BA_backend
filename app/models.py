@@ -52,7 +52,7 @@ class UserInfo(models.Model):
         return sum + 1
 
     def get_directly_recruited_len(self):
-        return len(UserInfo.objects.filter(invited_by=self.user, completed_survey=True))
+        return len(UserInfo.objects.filter(invited_by=self.user, completed_survey_part2=True))
 
     def get_total_recruited_len(self):
         return self.total_recruited_len_rec() - 1

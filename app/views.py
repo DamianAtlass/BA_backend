@@ -371,12 +371,6 @@ def history(request):
 
 
 @api_view(['POST', 'DELETE'])
-def foo(request, user_pk="", survey_part=""):
-    if request.method == 'POST':
-        return Response(status=status.HTTP_200_OK, data={user_pk: user_pk, survey_part: survey_part})
-
-
-@api_view(['POST', 'DELETE'])
 def survey_data(request, user_pk="", survey_part=""):
     if request.method == 'POST':
         survey_part = int(survey_part)

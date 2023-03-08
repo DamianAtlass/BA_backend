@@ -29,7 +29,7 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
             print("DIALOG FINISHED")
             user.userinfo.completed_dialog = True
             user.userinfo.save()
-            result = write_messages(user)
+            result = log_messages(user)
             print("Write messages:", result)
             return bot_response, bot_responses
         else:
@@ -39,7 +39,7 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
                 bot_response = bot_response.next.all()[0]
 
 
-def write_messages(user=None):
+def log_messages(user=None):
     dir_path = "log"
     file_path = f"{os.path.join(dir_path, f'{user.pk:03}')}.txt"
     print("filepath: ", file_path)
@@ -54,7 +54,7 @@ def write_messages(user=None):
         writer = csv.writer(csvfile)
         writer.writerow(header)
         for message in user.history.messages.all():
-            writer.writerow([convert_to_localtime(message.date, "%d/%m/%Y_%H:%M:%S"),
+            writer.writerow([convert_to_localtime(message.date, "%d-%m-%Y_%H-%M-%S"),
                              message.graph_message.author,
                              message.graph_message.content,
                              message.order_id,

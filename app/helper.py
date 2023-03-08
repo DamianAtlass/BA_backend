@@ -22,7 +22,6 @@ data: stringyfied json data'''
 def save_survey_data(user_pk, survey_part, data):
     dir_path = f"surveyData_part{survey_part}"
     file_path = f"{os.path.join(dir_path, user_pk)}.json"
-    print("filepath: ", file_path)
 
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -31,7 +30,8 @@ def save_survey_data(user_pk, survey_part, data):
     # if file exists, add _new (for debugging), there should never be more than 1 file of a participant
     if os.path.exists(file_path):
         first_part = file_path.split(".")[0]
-        file_path = f"{first_part}_{datetime.now().strftime('%H_%M')}.json"
+        date = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
+        file_path = f"{first_part}_{date}.json"
 
     print(file_path)
     json_object = json.dumps(data, indent=4)
