@@ -19,14 +19,15 @@ user_pk: 3 digit pre-zeroed,
 data: stringyfied json data'''
 
 
-def save_survey_data(user_pk, data):
-    dir_path = "surveyData"
+def save_survey_data(user_pk, survey_part, data):
+    dir_path = f"surveyData_part{survey_part}"
     file_path = f"{os.path.join(dir_path, user_pk)}.json"
     print("filepath: ", file_path)
 
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
+    #TODO take out if live???
     # if file exists, add _new (for debugging), there should never be more than 1 file of a participant
     if os.path.exists(file_path):
         first_part = file_path.split(".")[0]

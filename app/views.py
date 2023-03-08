@@ -6,7 +6,7 @@ from django.db.utils import IntegrityError
 from env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
-from .extended_helper import  get_bot_messages
+from .extended_helper import get_bot_messages
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
@@ -35,9 +35,7 @@ def ok(request):
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'DELETE':
-
         User.objects.create_user(username="admin", password=DEFAULT_PASSWORD)
-
 
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
@@ -77,7 +75,8 @@ def login(request):
                 "username": authenticated_user.username,
                 "user_pk": authenticated_user.pk,
                 "completed_dialog": authenticated_user.userinfo.completed_dialog,
-                "completed_survey": authenticated_user.userinfo.completed_survey,
+                "completed_survey_part1": authenticated_user.userinfo.completed_survey_part1,
+                "completed_survey_part2": authenticated_user.userinfo.completed_survey_part2,
             }
             print("data: ", data)
 
@@ -96,7 +95,8 @@ def login(request):
                             "username": authenticated_user.username,
                             "user_pk": authenticated_user.pk,
                             "completed_dialog": authenticated_user.userinfo.completed_dialog,
-                            "completed_survey": authenticated_user.userinfo.completed_survey,
+                            "completed_survey_part1": authenticated_user.userinfo.completed_survey_part1,
+                            "completed_survey_part2": authenticated_user.userinfo.completed_survey_part2,
                         }
                         print("data: ", data)
                         return Response(status=status.HTTP_200_OK, data=data)
@@ -139,7 +139,6 @@ def adminlogin(request):
                             })
 
         authenticated_user = authenticate(request, username=username, password=password)
-
 
         if authenticated_user is not None:
             django_login(request, authenticated_user)
@@ -193,7 +192,8 @@ def getuserdata(request):
                     "verified": user.userinfo.verified,
                     "dialog_style": user.userinfo.dialog_style,
                     "completed_dialog": user.userinfo.completed_dialog,
-                    "completed_survey": user.userinfo.completed_survey,
+                    "completed_survey_part1": user.userinfo.completed_survey_part1,
+                    "completed_survey_part2": user.userinfo.completed_survey_part2,
                     "user_pk": user.pk,
                     "invited_by": user.userinfo.invited_by.username if user.userinfo.invited_by else "",
                     "user_score": user.userinfo.get_user_score() * USERSCORE_MULTIPLIER,
@@ -209,7 +209,6 @@ def getuserdata(request):
 
 @api_view(['GET', 'POST', 'DELETE'])
 def accounts(request):
-
     if request.method == 'POST':
         print(request.data)
 
@@ -237,7 +236,7 @@ def accounts(request):
                                   "error-message": "Benutzername ungültig oder bereits vergeben!"})
 
         ### create userinfo
-        #TODO: remove partly(!) when live
+        # TODO: remove partly(!) when live
         match request.data.get("email"):
             case "alice@mail.com":
                 dialog_style = DIALOG_STYLE_ONE_ON_ONE
@@ -261,13 +260,12 @@ def accounts(request):
         new_history = History(user=new_user)
         new_history.save()
 
-
         ### set invited by
         if request.data.get("invitedBy"):
             try:
                 inviting_user = User.objects.get(username=request.data.get("invitedBy"))
 
-                if not inviting_user.userinfo.completed_survey:
+                if not inviting_user.userinfo.completed_survey_part2:
                     return Response(status=status.HTTP_400_BAD_REQUEST,
                                     data={"error": "Einladender Nutzer muss Studie vorher ausfüllen!"})
 
@@ -280,17 +278,19 @@ def accounts(request):
         try:
             result = send_confirmation_email(new_user)
 
-            #sending process was not successfull
+            # sending process was not successfull
             if not result == 1:
-                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": "Senden der Email fehlgeschlagen!"})
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                data={"error": "Senden der Email fehlgeschlagen!"})
 
-        #TODO specify if an exception ever occurs
+        # TODO specify if an exception ever occurs
         except Exception as e:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
 
         return Response(status=status.HTTP_201_CREATED,
-                        data={"success-message": (f"Account erstellt! Eine Email wurde an {new_user.userinfo.email} gesendet. "
-                                                  "Du kannst dieses Popup nun schließen.")})
+                        data={"success-message": (
+                            f"Account erstellt! Eine Email wurde an {new_user.userinfo.email} gesendet. "
+                            "Du kannst dieses Popup nun schließen.")})
 
     if request.method == 'DELETE':
         print(request.data)
@@ -352,7 +352,8 @@ def history(request):
         print("Delete history of ", username)
 
         user.userinfo.last_bot_message_pk = -1
-        user.userinfo.completed_survey = False
+        user.userinfo.completed_survey_part1 = False
+        user.userinfo.completed_survey_part2 = False
         user.userinfo.completed_dialog = False
         user.userinfo.save()
 
@@ -370,27 +371,74 @@ def history(request):
 
 
 @api_view(['POST', 'DELETE'])
-def survey_data(request, user_pk=""):
+def foo(request, user_pk="", survey_part=""):
     if request.method == 'POST':
-        #check if user exists & if data has already been sent
+        return Response(status=status.HTTP_200_OK, data={user_pk: user_pk, survey_part: survey_part})
+
+
+@api_view(['POST', 'DELETE'])
+def survey_data(request, user_pk="", survey_part=""):
+    if request.method == 'POST':
+        survey_part = int(survey_part)
+        if not (survey_part == 1 or survey_part == 2):
+            return Response(status=status.HTTP_404_NOT_FOUND, data={
+                "error": "NO_SUCH_SURVEY",
+                "error-message": f"You tried to hand in survey No {survey_part}, but that doesn't exist!"})
+
+        # check if user exists & if data has already been sent
         try:
             user = User.objects.get(pk=int(user_pk))
         except User.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
 
-        # check if survey has been handed in already
-        if not user.userinfo.completed_survey:
+        # distinguish between survey part 1 and 2
+        if survey_part == 1:
+            #check if handed in aleady
+            if user.userinfo.completed_survey_part1:
+                return Response(status=status.HTTP_403_FORBIDDEN, data={
+                    "error": "HANDED_IN_ALREADY",
+                    "error-message": f"You handed survey {survey_part} in already!"})
 
-            success = save_survey_data(user_pk, request.data)
-            user.userinfo.completed_survey = success
+            #check if other steps to do first
+            elif user.userinfo.completed_dialog or user.userinfo.completed_survey_part2:
+                return Response(status=status.HTTP_403_FORBIDDEN, data={
+                    "error": "NOT_YET_ALLOWED",
+                    "error-message": f"You can't do that yet!"})
+
+            success = save_survey_data(user_pk, survey_part, request.data)
+            user.userinfo.completed_survey_part1 = success
             user.userinfo.save()
 
             if success:
                 return Response(status=status.HTTP_200_OK)
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error-message": f"{user.username}'s survey data was not saved!"})
+                return Response(status=status.HTTP_400_BAD_REQUEST,
+                                data={"ERROR": "SURVEY_NOT_SAVED",
+                                      "error-message": f"{user.username}'s survey part {survey_part} data was not saved!"})
+
         else:
-            return Response(status=status.HTTP_403_FORBIDDEN, data={"error-message": f"{user.username} handed a survey in already!"})
+            #check if handed in aleady
+            if user.userinfo.completed_survey_part2:
+                return Response(status=status.HTTP_404_NOT_FOUND, data={
+                    "error": "HANDED_IN_ALREADY",
+                    "error-message": f"You handed survey {survey_part} in already!"})
+
+            #check if other steps to do first
+            elif not (user.userinfo.completed_survey_part1 and user.userinfo.completed_dialog):
+                return Response(status=status.HTTP_404_NOT_FOUND, data={
+                    "error": "NOT_YET_ALLOWED",
+                    "error-message": f"You can't do that yet!"})
+
+            success = save_survey_data(user_pk, survey_part, request.data)
+            user.userinfo.completed_survey_part2 = success
+            user.userinfo.save()
+
+            if success:
+                return Response(status=status.HTTP_200_OK)
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST,
+                                data={"ERROR": "SURVEY_NOT_SAVED",
+                                      "error-message": f"{user.username}'s survey part {survey_part} data was not saved!"})
 
     if request.method == 'DELETE':
 
@@ -399,7 +447,7 @@ def survey_data(request, user_pk=""):
         except User.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
 
-        user.userinfo.completed_survey = False
+        user.userinfo.completed_survey_part2 = False
         user.userinfo.completed_dialog = False
         user.userinfo.save()
 
@@ -409,17 +457,11 @@ def survey_data(request, user_pk=""):
 @api_view(['GET', 'POST'])
 def confirme_mail(request):
     if request.method == 'GET':
-        try: #to get user
+        try:  # to get user
             user = User.objects.get(username=request.data.get("username"))
             send_confirmation_email(user)
         except User.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
-
-
-
-
-
-
 
 
 @api_view(['POST'])
@@ -429,7 +471,6 @@ def get_chatdata(request):
         print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
         username = request.data.get("username", None)
-
 
         user = User.objects.get(username=username)
         history = []
@@ -488,5 +529,3 @@ def get_chatdata(request):
         }
 
         return Response(status=status.HTTP_200_OK, data=response_data)
-
-
