@@ -35,7 +35,9 @@ def ok(request):
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'DELETE':
-        User.objects.create_user(username="admin", password=DEFAULT_PASSWORD)
+        user = User.objects.get(username="Alice")
+
+        allowed_to_display(user=user, parent=GraphMessage.objects.get(pk=11))
 
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
@@ -514,7 +516,9 @@ def get_chatdata(request):
                 "pk": user_res.pk,
                 "content": user_res.content
             }
-            choices.append(user_response)
+            #TODO
+            if allowed_to_display(user, user_res, last_bot_response):
+                choices.append(user_response)
 
         response_data = {
             "history": history,
@@ -523,3 +527,45 @@ def get_chatdata(request):
         }
 
         return Response(status=status.HTTP_200_OK, data=response_data)
+
+
+def allowed_to_display(user=None, choice=None, parent=None):
+    """
+
+    :param user:
+    :param choice: GraphMessage with author="USER"
+    :param parent: GraphMessage of bot which points to choice
+    :return:
+    """
+
+    if choice.author !="USER":
+        print("ERROR")
+
+
+
+    # get sibling pks relative to choice
+    siblings_pk = list(map(lambda o: o.pk, parent.next.all()))
+    print("siblings_pk:", siblings_pk)
+
+    history_messages = user.history.messages.all()
+    unique_graph_messages_pks_from_history = set(map(lambda x: x.graph_message.pk, history_messages))
+    print("unique_graph_messages_pks_from_history:", unique_graph_messages_pks_from_history)
+
+    print("choice.pk:", choice.pk)
+    if choice.pk in unique_graph_messages_pks_from_history:
+        print(f"path {choice.content} already taken")
+        return False
+
+    if choice.explore_siblings == 0:
+        print("Result: explore_siblings == 0", True)
+        return True
+
+    explored_path = 0
+    for unique_graph_messages_pk in unique_graph_messages_pks_from_history:
+        if unique_graph_messages_pk in siblings_pk:
+            explored_path += 1
+
+    result = True if explored_path >= choice.explore_siblings else False
+
+    print("Result: ", result)
+    return result
