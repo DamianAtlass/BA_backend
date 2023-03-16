@@ -23,7 +23,6 @@ DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 USERSCORE_MULTIPLIER = 100
 
 
-
 @api_view(['GET', 'POST', 'DELETE'])
 def ok(request):
     if request.method == 'GET':
@@ -55,6 +54,13 @@ def createadmin(request):
 @api_view(['POST'])
 def login(request):
     print("LOGIN ATTEMPT")
+
+    if not request.data.get("username"):
+        return Response(status=status.HTTP_404_NOT_FOUND,
+                        data={
+                            "error": "INCOMPLETE_REQUEST",
+                        })
+
     if request.method == 'POST':
         print(request.data)
         username = request.data.get("username")
@@ -169,7 +175,7 @@ def getuserdata(request):
 
         token, created = Token.objects.get_or_create(user=admin)
 
-        if not token.key == request.data.get("token", None):
+        if not token.key == request.data.get("token"):
             return Response(status=status.HTTP_401_UNAUTHORIZED, data={
                 "error-message": "wrong token"
             })
@@ -213,6 +219,13 @@ def getuserdata(request):
 @api_view(['GET', 'POST', 'DELETE'])
 def accounts(request):
     if request.method == 'POST':
+
+        if not request.data.get("email") or not request.data.get("username"):
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={
+                                "error": "INCOMPLETE_REQUEST",
+                            })
+
         print(request.data)
 
         ###check if email exists in userinfo before actuall user is created
@@ -297,7 +310,7 @@ def accounts(request):
 
     if request.method == 'DELETE':
         print(request.data)
-        username = request.data.get("username", None)
+        username = request.data.get("username")
         tmp = username
         try:
             User.objects.get(username=username).delete()
@@ -349,7 +362,14 @@ def inv(request, user_pk=""):
 @api_view(['DELETE'])
 def history(request):
     if request.method == 'DELETE':
-        username = request.data.get("username", None)
+
+        if not request.data.get("username"):
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={
+                                "error": "INCOMPLETE_REQUEST",
+                            })
+
+        username = request.data.get("username")
         user = User.objects.get(username=username)
 
         print("Delete history of ", username)
@@ -390,13 +410,13 @@ def survey_data(request, user_pk="", survey_part=""):
 
         # distinguish between survey part 1 and 2
         if survey_part == 1:
-            #check if handed in aleady
+            # check if handed in aleady
             if user.userinfo.completed_survey_part1:
                 return Response(status=status.HTTP_403_FORBIDDEN, data={
                     "error": "HANDED_IN_ALREADY",
                     "error-message": f"You handed survey {survey_part} in already!"})
 
-            #check if other steps to do first
+            # check if other steps to do first
             elif user.userinfo.completed_dialog or user.userinfo.completed_survey_part2:
                 return Response(status=status.HTTP_403_FORBIDDEN, data={
                     "error": "NOT_YET_ALLOWED",
@@ -414,13 +434,13 @@ def survey_data(request, user_pk="", survey_part=""):
                                       "error-message": f"{user.username}'s survey part {survey_part} data was not saved!"})
 
         else:
-            #check if handed in aleady
+            # check if handed in aleady
             if user.userinfo.completed_survey_part2:
                 return Response(status=status.HTTP_404_NOT_FOUND, data={
                     "error": "HANDED_IN_ALREADY",
                     "error-message": f"You handed survey {survey_part} in already!"})
 
-            #check if other steps to do first
+            # check if other steps to do first
             elif not (user.userinfo.completed_survey_part1 and user.userinfo.completed_dialog):
                 return Response(status=status.HTTP_404_NOT_FOUND, data={
                     "error": "NOT_YET_ALLOWED",
@@ -464,6 +484,12 @@ def confirme_mail(request):
 @api_view(['POST'])
 def get_chatdata(request):
     if request.method == 'POST':
+
+        if not request.data.get("username", None):
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={
+                                "error": "INCOMPLETE_REQUEST",
+                            })
 
         print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
@@ -517,7 +543,7 @@ def get_chatdata(request):
                 "pk": user_res.pk,
                 "content": user_res.content
             }
-            #TODO
+            # TODO
             if allowed_to_display(user, user_res, last_bot_response):
                 choices.append(user_response)
 
