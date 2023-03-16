@@ -30,3 +30,4 @@ env.py
 env_server.py
 surveyData_part1/
 surveyData_part2/
+backup.log
