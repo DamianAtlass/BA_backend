@@ -6,7 +6,7 @@ from django.db.utils import IntegrityError
 from env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
-from .extended_helper import get_bot_messages
+from .extended_helper import get_bot_messages, allowed_to_display
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
@@ -21,6 +21,7 @@ DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
 USERSCORE_MULTIPLIER = 100
+
 
 
 @api_view(['GET', 'POST', 'DELETE'])
@@ -527,45 +528,3 @@ def get_chatdata(request):
         }
 
         return Response(status=status.HTTP_200_OK, data=response_data)
-
-
-def allowed_to_display(user=None, choice=None, parent=None):
-    """
-
-    :param user:
-    :param choice: GraphMessage with author="USER"
-    :param parent: GraphMessage of bot which points to choice
-    :return:
-    """
-
-    if choice.author !="USER":
-        print("ERROR")
-
-
-
-    # get sibling pks relative to choice
-    siblings_pk = list(map(lambda o: o.pk, parent.next.all()))
-    print("siblings_pk:", siblings_pk)
-
-    history_messages = user.history.messages.all()
-    unique_graph_messages_pks_from_history = set(map(lambda x: x.graph_message.pk, history_messages))
-    print("unique_graph_messages_pks_from_history:", unique_graph_messages_pks_from_history)
-
-    print("choice.pk:", choice.pk)
-    if choice.pk in unique_graph_messages_pks_from_history:
-        print(f"path {choice.content} already taken")
-        return False
-
-    if choice.explore_siblings == 0:
-        print("Result: explore_siblings == 0", True)
-        return True
-
-    explored_path = 0
-    for unique_graph_messages_pk in unique_graph_messages_pks_from_history:
-        if unique_graph_messages_pk in siblings_pk:
-            explored_path += 1
-
-    result = True if explored_path >= choice.explore_siblings else False
-
-    print("Result: ", result)
-    return result

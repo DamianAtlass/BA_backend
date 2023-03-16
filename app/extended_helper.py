@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from django.contrib.auth.models import User
 
-from app.helper import convert_to_localtime
+from app.helper import convert_to_localtime, safe_check_dir, safe_file_path, USER_DATA_DIRECTORY
 from app.models import UserInfo, GraphMessage, HistoryMessage
 import json
 import csv
@@ -40,8 +40,9 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
 
 
 def log_messages(user=None):
-    dir_path = "log"
-    file_path = f"{os.path.join(dir_path, f'{user.pk:03}')}.txt"
+    dir_path = safe_check_dir([USER_DATA_DIRECTORY, "log"])
+    file_path = f"{os.path.join(dir_path, f'{user.pk:03}')}.csv"
+    file_path = safe_file_path(file_path)
     print("filepath: ", file_path)
 
     if not os.path.exists(dir_path):
@@ -51,7 +52,8 @@ def log_messages(user=None):
 
     with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
         header = ['date', 'author', "content", "order_id", "pk"]
-        writer = csv.writer(csvfile)
+        #TODO set quote char to quotechar='\'' when live
+        writer = csv.writer(csvfile, delimiter=',', quotechar='\"')
         writer.writerow(header)
         for message in user.history.messages.all():
             writer.writerow([convert_to_localtime(message.date, "%d-%m-%Y_%H-%M-%S"),
@@ -59,6 +61,45 @@ def log_messages(user=None):
                              message.graph_message.content,
                              message.order_id,
                              message.graph_message.pk]
-            )
+                            )
 
     return os.path.exists(file_path)
+
+
+def allowed_to_display(user=None, choice=None, parent=None):
+    """
+    :param user:
+    :param choice: GraphMessage with author="USER"
+    :param parent: GraphMessage of bot which points to choice
+    :return:
+    """
+
+    if choice.author !="USER":
+        print("ERROR")
+
+    # get sibling pks relative to choice
+    siblings_pk = list(map(lambda o: o.pk, parent.next.all()))
+    print("siblings_pk:", siblings_pk)
+
+    history_messages = user.history.messages.all()
+    unique_graph_messages_pks_from_history = set(map(lambda x: x.graph_message.pk, history_messages))
+    print("unique_graph_messages_pks_from_history:", unique_graph_messages_pks_from_history)
+
+    print("choice.pk:", choice.pk)
+    if choice.pk in unique_graph_messages_pks_from_history:
+        print(f"path {choice.content} already taken")
+        return False
+
+    if choice.explore_siblings == 0:
+        print("Result: explore_siblings == 0", True)
+        return True
+
+    explored_path = 0
+    for unique_graph_messages_pk in unique_graph_messages_pks_from_history:
+        if unique_graph_messages_pk in siblings_pk:
+            explored_path += 1
+
+    result = True if explored_path >= choice.explore_siblings else False
+
+    print("Result: ", result)
+    return result
