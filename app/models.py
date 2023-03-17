@@ -76,7 +76,7 @@ class UserInfo(models.Model):
 
 
 class GraphMessage(models.Model):
-    content = models.CharField(max_length=240, null=True)
+    content = models.CharField(max_length=500, null=True)
     author = models.CharField(max_length=25, null=True)
     next = models.ManyToManyField("self", blank=True, symmetrical=False)
     is_start = models.BooleanField(null=False, default=False)
@@ -85,8 +85,13 @@ class GraphMessage(models.Model):
     explore_siblings = models.IntegerField("Min explored sibling paths", default=0, null=True, blank=True)
 
     def __str__(self):
-        return f"[{self.pk}] {self.author}: '{self.content}'"
+        return f"[{self.pk:03}] -> {self.get_next_pks()} {self.author}: '{self.content}'"
 
+    def get_next_pks(self):
+        list = []
+        for gm in self.next.all():
+            list.append(gm.pk)
+        return list
     class Meta:
         verbose_name = "GraphMessage"
         verbose_name_plural = "GraphMessages"
