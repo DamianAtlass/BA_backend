@@ -7,7 +7,7 @@ from env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
-from .extended_helper import get_bot_messages, allowed_to_display, create_new_verification_code, verify_token
+from .extended_helper import get_bot_messages, allowed_to_display, create_new_verification_code, verify_token, check_if_rushed, get_interaction_duration_minutes
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
 import random
@@ -31,15 +31,18 @@ def ok(request):
 
     if request.method == 'POST':
         if request.data.get("action") == "test":
-            alice = User.objects.get(username="Alice")
-
-            token, created = Token.objects.get_or_create(user=alice)
-            print("token.key", token.key)
-            print("token.key type", type(token.key))
+            check_if_rushed(3)
+            print("XXX")
 
 
-            return Response(status=status.HTTP_200_OK, data={"message": token.key})
+            return Response(status=status.HTTP_200_OK)
 
+        if request.data.get("action") == "printuserpk":
+
+            for u in User.objects.all():
+                print(u.username+": " + str(u.pk))
+
+            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
         if request.data.get("action") == "printpk":
 
@@ -225,11 +228,14 @@ def adminlogin(request):
 @api_view(['POST'])
 def getuserdata(request):
     ### verify token
-    verify_token(request.data.get("token"), request.data.get("username"), False)
+
+    response = verify_token(request.data.get("token"), request.data.get("username"))
+    if response:
+        return response
 
     if request.method == 'POST':
 
-        verify_token()
+
         admin = User.objects.get(username=ADMIN_USERNAME)
 
         token, created = Token.objects.get_or_create(user=admin)
@@ -268,6 +274,8 @@ def getuserdata(request):
                     "total_invited_len": total_invited_len,
                     "directly_recruited_len": directly_recruited_len,
                     "total_recruited_len": total_recruited_len,
+                    "rushed": user.userinfo.rushed,
+                    "duration": get_interaction_duration_minutes(user),
                 }
             )
 
@@ -456,7 +464,9 @@ def history(request):
 @api_view(['POST', 'DELETE'])
 def survey_data(request, user_pk="", survey_part=""):
     ### verify token
-    verify_token(request.data.get("token"), request.data.get("username"), False)
+    response = verify_token(request.data.get("token"), request.data.get("username"))
+    if response:
+        return response
 
     if request.method == 'POST':
         survey_part = int(survey_part)
@@ -541,7 +551,9 @@ def verify_token_view(request):
         username = request.data.get("username")
         request_token = request.data.get("token")
 
-        verify_token(request_token, username)
+        response = verify_token(request.data.get("token"), request.data.get("username"), True)
+        return response
+
 
 
 

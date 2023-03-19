@@ -11,6 +11,8 @@ from app.models import UserInfo, GraphMessage, HistoryMessage
 import json
 import csv
 
+MINIMUM_DURATION_MINUTES = 3
+
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
     while True:
@@ -32,7 +34,12 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         if bot_response.is_end:
             print("DIALOG FINISHED")
             user.userinfo.completed_dialog = True
+
+            user.userinfo.rushed = check_if_rushed(user)
             user.userinfo.save()
+
+
+
             result = log_messages(user)
             print("Write messages:", result)
             return bot_response, bot_responses
@@ -45,7 +52,11 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
 
 def log_messages(user=None):
     dir_path = safe_check_dir([USER_DATA_DIRECTORY, "log"])
-    file_path = f"{os.path.join(dir_path, f'{user.pk:03}')}.csv"
+    if user.userinfo.rushed:
+        suffix = "_rushed"
+    else:
+        suffix = ""
+    file_path = f"{os.path.join(dir_path, f'{user.pk:03}{suffix}')}.csv"
     file_path = safe_file_path(file_path)
     print("filepath: ", file_path)
 
@@ -118,15 +129,36 @@ def create_new_verification_code(user):
     user.userinfo.save()
 
 
-def verify_token(request_token, username, return_response_on_success):
+
+def get_interaction_duration_minutes(user):
+    msg_len = len(user.history.messages.all())
+    if msg_len == 0:
+        return 0
+
+    first_message_date = user.history.messages.all()[0].date
+    last_message_date = user.history.messages.all()[msg_len-1].date
+
+    return (last_message_date - first_message_date).total_seconds()/60
+
+def check_if_rushed(user):
+    difference_minutes = get_interaction_duration_minutes(user)
+
+    if difference_minutes < MINIMUM_DURATION_MINUTES:
+        return True
+    else:
+        return False
+
+
+def verify_token(request_token, username, return_response_on_success=False):
     try:
         user = User.objects.get(username=username)
 
         token, created = Token.objects.get_or_create(user=user)
-
         if token.key == request_token:
             if return_response_on_success:
                 return Response(status=status.HTTP_200_OK)
+            else:
+                return None
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED,
                             data={
