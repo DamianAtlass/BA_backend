@@ -1,6 +1,10 @@
 import os
+import random
 from datetime import datetime
 from django.contrib.auth.models import User
+from rest_framework import status
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
 
 from app.helper import convert_to_localtime, safe_check_dir, safe_file_path, USER_DATA_DIRECTORY
 from app.models import UserInfo, GraphMessage, HistoryMessage
@@ -103,3 +107,34 @@ def allowed_to_display(user=None, choice=None, parent=None):
 
     print("Result: ", result)
     return result
+
+
+def create_new_verification_code(user):
+    while True:
+        new_code = random.randint(100000, 999999)
+        if not (user.userinfo.verification_code == new_code):
+            break
+    user.userinfo.verification_code = new_code
+    user.userinfo.save()
+
+
+def verify_token(request_token, username, return_response_on_success):
+    try:
+        user = User.objects.get(username=username)
+
+        token, created = Token.objects.get_or_create(user=user)
+
+        if token.key == request_token:
+            if return_response_on_success:
+                return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED,
+                            data={
+                                "error": "UNAUTHORIZED"
+                            })
+
+    except User.DoesNotExist as e:
+        return Response(status=status.HTTP_404_NOT_FOUND,
+                        data={
+                            "error": "USER_NOT_FOUND"
+                        })

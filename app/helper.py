@@ -83,12 +83,14 @@ def is_testing_user(user):
 
 
 def send_confirmation_email(user):
-    print("send email")
 
     message = f"Danke für deine Teilnahme an dieser Studie, {user.username}! Gib beim Login diesen Code ein, um dich zu verifizieren: {user.userinfo.verification_code}"
 
     if is_testing_user(user):
+        print("is testing-user, dont send email")
         return 1
+    else:
+        print("send email!")
 
     return send_mail(
         subject='Bestätige deine Emailadresse!',

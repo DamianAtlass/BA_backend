@@ -11,7 +11,7 @@ USER = "USER"
 class UserInfo(models.Model):
     user = models.OneToOneField(User, related_name="userinfo",  on_delete=models.CASCADE, null=True)
     email = models.CharField("email", max_length=240, null=True, unique=True)
-    verified = models.BooleanField("Verified", default=False)
+    verified = models.BooleanField("Verified", default=False) #TODO remove?
     last_bot_message_pk = models.IntegerField(default=-1)
     dialog_style = models.CharField("Dialog Style", max_length=60, null=True)
     completed_dialog = models.BooleanField("Completed Dialog", default=False)

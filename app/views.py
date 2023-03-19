@@ -6,11 +6,12 @@ from django.db.utils import IntegrityError
 from env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
-from .extended_helper import get_bot_messages, allowed_to_display
 from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
+from .extended_helper import get_bot_messages, allowed_to_display, create_new_verification_code, verify_token
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
 import random
+import csv
 
 # dialog styles
 DIALOG_STYLE_ONE_ON_ONE = "ONE_ON_ONE"
@@ -29,17 +30,62 @@ def ok(request):
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
     if request.method == 'POST':
-        for user in User.objects.all():
-            print(f"User {user.username}: {user.pk}")
-        print(request.data)
-        return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+        if request.data.get("action") == "test":
+            alice = User.objects.get(username="Alice")
 
-    if request.method == 'DELETE':
-        user = User.objects.get(username="Alice")
+            token, created = Token.objects.get_or_create(user=alice)
+            print("token.key", token.key)
+            print("token.key type", type(token.key))
 
-        allowed_to_display(user=user, parent=GraphMessage.objects.get(pk=11))
 
-        return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+            return Response(status=status.HTTP_200_OK, data={"message": token.key})
+
+
+        if request.data.get("action") == "printpk":
+
+            for g in GraphMessage.objects.all():
+                if len(g.next.all()) == 0:
+                    print(g.pk)
+
+            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+
+        if request.data.get("action") == "add relation":
+            pk = request.data.get("pk")
+
+            array = request.data.get("next")
+            try:
+                curr = GraphMessage.objects.get(pk=pk)
+
+                for a in array:
+                    f = GraphMessage.objects.get(pk=a)
+                    if (curr.author == "USER" and f.author == "USER") or a == pk:
+                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "no user to user"})
+
+            except Exception:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "something went wrong"})
+
+
+            for a in array:
+                curr.next.add(GraphMessage.objects.get(pk=a))
+
+            print(pk, " -> ", curr.get_next_pks())
+
+            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+
+        if request.data.get("action") == "printGraph":
+            with open("graph.csv", 'w', newline='', encoding='utf-8') as csvfile:
+                header = ['pk_relation', 'author', 'min', 'content']
+
+                writer = csv.writer(csvfile, delimiter=',', quotechar='\'')
+
+                writer.writerow(header)
+                for gm in GraphMessage.objects.all():
+                    writer.writerow([f"{gm.pk} -> {gm.get_next_pks()}",
+                                     gm.author,
+                                     gm.explore_siblings,
+                                     gm.content]
+                                    )
+        return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -89,45 +135,53 @@ def login(request):
             }
             print("data: ", data)
 
-            if authenticated_user.userinfo.verified:
+            token, created = Token.objects.get_or_create(user=authenticated_user)
+
+            request_token = request.data.get("token")
+            if not request_token:
+                print("no request token")
+
+            if token.key == request.data.get("token"):
                 return Response(status=status.HTTP_200_OK, data=data)
             else:
+
                 verification_code = request.data.get("verification_code")
                 if verification_code:
                     verification_code = int(verification_code)
+                    print("XXX verification_code: ", verification_code)
+                    print("XXX request.data.get('verification_code'): ", request.data.get("verification_code"))
                     if verification_code == authenticated_user.userinfo.verification_code:
-                        authenticated_user.userinfo.verified = True
-                        authenticated_user.userinfo.save()
-                        data = {
-                            "success": "LOGIN_SUCCESS",
-                            "dialog_style": authenticated_user.userinfo.dialog_style,
-                            "username": authenticated_user.username,
-                            "user_pk": authenticated_user.pk,
-                            "completed_dialog": authenticated_user.userinfo.completed_dialog,
-                            "completed_survey_part1": authenticated_user.userinfo.completed_survey_part1,
-                            "completed_survey_part2": authenticated_user.userinfo.completed_survey_part2,
-                        }
-                        print("data: ", data)
+                        data["token"] = token.key
                         return Response(status=status.HTTP_200_OK, data=data)
                     else:
+                        create_new_verification_code(authenticated_user)
+                        send_confirmation_email(authenticated_user)
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
                                         data={
-                                            "error-message": "Falscher Verifizierungscode.",
-                                            "error": "WRONG_VERIFICATION_CODE"
+                                            "error": "WRONG_VERIFICATION_CODE",
+                                            "error-message": "Code nicht korrekt. "
+                                                             "Ein Verifikations-Code wurde an deine Emailadresse gesendet! "
+                                                             "Bitte habe Geduld und sieh in deinem Spam-Postfach nach."
                                         })
-
                 else:
-                    return Response(status=status.HTTP_401_UNAUTHORIZED,
-                                    data={
-                                        "error-message": "Bitte gib den Verifizierungscode an, der an deine Emailadresse geschickt wurde. Sieh ggf. im Spam-Ordner nach.",
-                                        "error": "VERIFICATION_NECESSARY"
-                                    })
-        else:
-            return Response(status=status.HTTP_401_UNAUTHORIZED,
-                            data={
-                                "error-message": "Falsche Anmeldeinformationen.",
-                                "error": "WRONG_CREDENTIALS"
-                            })
+                    # SEND CODE
+                    create_new_verification_code(authenticated_user)
+                    result = send_confirmation_email(authenticated_user)
+                    # sending process was not successfull
+                    if not result == 1:
+                        return Response(status=status.HTTP_401_UNAUTHORIZED,
+                                        data={"error": "WRONG_TOKEN",
+                                              "error-message": "Verifikation notwendig. Es wurde versucht den Verifikations-Code erneut "
+                                                               "an deine Emailadresse zu senden. Das ist jedoch fehlgeschlagen. Bitte versuche es erneut!"})
+                    else:
+                        return Response(status=status.HTTP_401_UNAUTHORIZED,
+                                        data={"error": "WRONG_TOKEN",
+                                              "error-message": "Verifikation notwendig. "
+                                                               "Ein Verifikations-Code wurde an deine Emailadresse gesendet! "
+                                                               "Bitte habe Geduld und sieh in deinem Spam-Postfach nach."})
+
+
+
 
 
 @api_view(['POST'])
@@ -170,7 +224,12 @@ def adminlogin(request):
 
 @api_view(['POST'])
 def getuserdata(request):
+    ### verify token
+    verify_token(request.data.get("token"), request.data.get("username"), False)
+
     if request.method == 'POST':
+
+        verify_token()
         admin = User.objects.get(username=ADMIN_USERNAME)
 
         token, created = Token.objects.get_or_create(user=admin)
@@ -198,7 +257,6 @@ def getuserdata(request):
                 {
                     "username": user.username,
                     "email": user.userinfo.email,
-                    "verified": user.userinfo.verified,
                     "dialog_style": user.userinfo.dialog_style,
                     "completed_dialog": user.userinfo.completed_dialog,
                     "completed_survey_part1": user.userinfo.completed_survey_part1,
@@ -244,6 +302,8 @@ def accounts(request):
                                                 password=DEFAULT_PASSWORD)
             new_user.save()
             print(f"User {new_user.username} created!")
+
+            Token.objects.get_or_create(user=new_user)
 
         except IntegrityError as e:
             print(e)
@@ -292,6 +352,7 @@ def accounts(request):
 
         # try to send verification email
         try:
+            create_new_verification_code(new_user)
             result = send_confirmation_email(new_user)
 
             # sending process was not successfull
@@ -308,6 +369,7 @@ def accounts(request):
                             f"Account erstellt! Eine Email wurde an {new_user.userinfo.email} gesendet. "
                             "Du kannst dieses Popup nun schließen.")})
 
+    #TODO remove
     if request.method == 'DELETE':
         print(request.data)
         username = request.data.get("username")
@@ -344,13 +406,11 @@ def invite(request, user_pk=""):
 
 
 @api_view(['GET'])
-def inv(request, user_pk=""):
+def score(request, user_pk=""):
     if request.method == 'GET':
         user_pk = int(user_pk)
         user = User.objects.get(pk=user_pk)
         directly_recruited_len = user.userinfo.get_directly_recruited_len()
-        # m = map(lambda x: x.user.username, invited_users)
-        # map(lambda x: print(x), m)
 
         user_score = user.userinfo.get_user_score() * USERSCORE_MULTIPLIER
 
@@ -395,6 +455,9 @@ def history(request):
 
 @api_view(['POST', 'DELETE'])
 def survey_data(request, user_pk="", survey_part=""):
+    ### verify token
+    verify_token(request.data.get("token"), request.data.get("username"), False)
+
     if request.method == 'POST':
         survey_part = int(survey_part)
         if not (survey_part == 1 or survey_part == 2):
@@ -422,7 +485,7 @@ def survey_data(request, user_pk="", survey_part=""):
                     "error": "NOT_YET_ALLOWED",
                     "error-message": f"You can't do that yet!"})
 
-            success = save_survey_data(user_pk, survey_part, request.data)
+            success = save_survey_data(user_pk, survey_part, request.data.get("json"))
             user.userinfo.completed_survey_part1 = success
             user.userinfo.save()
 
@@ -446,7 +509,7 @@ def survey_data(request, user_pk="", survey_part=""):
                     "error": "NOT_YET_ALLOWED",
                     "error-message": f"You can't do that yet!"})
 
-            success = save_survey_data(user_pk, survey_part, request.data)
+            success = save_survey_data(user_pk, survey_part, request.data.get("json"))
             user.userinfo.completed_survey_part2 = success
             user.userinfo.save()
 
@@ -457,6 +520,7 @@ def survey_data(request, user_pk="", survey_part=""):
                                 data={"ERROR": "SURVEY_NOT_SAVED",
                                       "error-message": f"{user.username}'s survey part {survey_part} data was not saved!"})
 
+    #TODO remove
     if request.method == 'DELETE':
 
         try:
@@ -471,21 +535,24 @@ def survey_data(request, user_pk="", survey_part=""):
         return Response(status=status.HTTP_200_OK)
 
 
-@api_view(['GET', 'POST'])
-def confirme_mail(request):
-    if request.method == 'GET':
-        try:  # to get user
-            user = User.objects.get(username=request.data.get("username"))
-            send_confirmation_email(user)
-        except User.DoesNotExist as e:
-            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
+@api_view(['POST'])
+def verify_token_view(request):
+    if request.method == 'POST':
+        username = request.data.get("username")
+        request_token = request.data.get("token")
+
+        verify_token(request_token, username)
+
 
 
 @api_view(['POST'])
 def get_chatdata(request):
+    ### verify token
+    verify_token(request.data.get("token"), request.data.get("username"), False)
+
     if request.method == 'POST':
 
-        if not request.data.get("username", None):
+        if not request.data.get("username"):
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={
                                 "error": "INCOMPLETE_REQUEST",
@@ -493,7 +560,7 @@ def get_chatdata(request):
 
         print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
-        username = request.data.get("username", None)
+        username = request.data.get("username")
 
         user = User.objects.get(username=username)
         history = []
@@ -554,3 +621,5 @@ def get_chatdata(request):
         }
 
         return Response(status=status.HTTP_200_OK, data=response_data)
+
+
