@@ -24,25 +24,30 @@ class UserInfo(models.Model):
         return f"[{self.pk}] Userinfo for {self.user} ({self.email})"
 
     def get_user_score(self, weight=1, factor=2):
+        if self.user.username =="testuser1":
+            print("---------------------------------------")
+
         if self.rushed:
-            return 1  # give the user a point even if he's rushed to keep his motivation up.
-            # notice that he doesn't get a point when it's calculated recursively
+            return 0 #TODO give phantom points?
         else:
             return self.get_user_score_rec(weight, factor)
 
     def get_user_score_rec(self, weight=1, factor=2):
+        print(self.user.username, "total_recruited_len_rec")
         if not self.completed_survey_part2:
             return 0
 
         user = self.user
-        userinfo_group = UserInfo.objects.filter(invited_by=user)
+        userinfo_group = UserInfo.objects.filter(invited_by=user, completed_survey_part2=True)
 
         sum = 0
         for _userinfo in userinfo_group:
-            sum += _userinfo.get_user_score(weight=weight/factor, factor=factor)
+            sum += _userinfo.get_user_score_rec(weight=weight/factor, factor=factor)
 
         if self.rushed:
+            print("return sum, sum", sum)
             return sum
+        print("return sum + weight, sum=", sum)
         return sum + weight
 
     def get_directly_invited_len(self):
@@ -53,31 +58,31 @@ class UserInfo(models.Model):
 
     def total_invited_len_rec(self):
         user = self.user
-        print(" invited ", user.username)
         userinfo_group = UserInfo.objects.filter(invited_by=user)
 
         sum = 0
         for _userinfo in userinfo_group:
             sum += _userinfo.total_invited_len_rec()
-        if self.rushed:
-            return sum
         return sum + 1
 
     def get_directly_recruited_len(self):
         return len(UserInfo.objects.filter(invited_by=self.user, completed_survey_part2=True, rushed=False))
 
     def get_total_recruited_len(self):
+
         if self.rushed:
-            return 0
-        return self.total_recruited_len_rec() - 1
+            return self.total_recruited_len_rec()
+        else:
+            return self.total_recruited_len_rec() - 1
 
     #basically the same as get_user_score, just without weights and factor. didn't want to reuse for simplicity
     def total_recruited_len_rec(self):
+
         if not self.completed_survey_part2:
             return 0
 
         user = self.user
-        userinfo_group = UserInfo.objects.filter(invited_by=user, completed_survey_part2=True, rushed=False)
+        userinfo_group = UserInfo.objects.filter(invited_by=user, completed_survey_part2=True)
 
         sum = 0
         for _userinfo in userinfo_group:
@@ -85,6 +90,7 @@ class UserInfo(models.Model):
 
         if self.rushed:
             return sum
+
         return sum + 1
 
     class Meta:

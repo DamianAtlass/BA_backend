@@ -3,11 +3,11 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
-from env import ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
 from rest_framework.authtoken.models import Token
 
-from .helper import convert_to_localtime, save_survey_data, send_confirmation_email
-from .extended_helper import get_bot_messages, allowed_to_display, create_new_verification_code, verify_token, check_if_rushed, get_interaction_duration_minutes
+from .helper import convert_to_localtime, send_confirmation_email
+from .extended_helper import get_bot_messages, allowed_to_display, create_new_verification_code, verify_token, \
+    check_if_rushed, get_interaction_duration_minutes, MINIMUM_DURATION_MINUTES, save_survey_data
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
 import random
@@ -19,85 +19,70 @@ DIALOG_STYLE_COLORED_BUBBLES = "COLORED_BUBBLES"
 DIALOG_STYLE_CLASSIC_GROUP = "CLASSIC_GROUP"
 DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 
+#verification done with email
 DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
 USERSCORE_MULTIPLIER = 100
 
-
-@api_view(['GET', 'POST', 'DELETE'])
+#TODO: remove post and delete?
+@api_view(['GET'])
 def ok(request):
     if request.method == 'GET':
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
-    if request.method == 'POST':
-        if request.data.get("action") == "test":
-            check_if_rushed(3)
-            print("XXX")
+    # if request.method == 'POST':
+    #     if request.data.get("action") == "test":
+    #         check_if_rushed(3)
+    #         print("XXX")
+    #
+    #
+    #         return Response(status=status.HTTP_200_OK)
+    #
+    #     if request.data.get("action") == "printuserpk":
+    #         for u in User.objects.all():
+    #             print(u.username+": " + str(u.pk))
+    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+    #
+    #     if request.data.get("action") == "print_graph_pk":
+    #         for g in GraphMessage.objects.all():
+    #             print(g.pk, " -> ", g.get_next_pks())
+    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+    #
+    #     if request.data.get("action") == "print_graph_pk_min":
+    #         for g in GraphMessage.objects.all():
+    #             if g.explore_siblings !=0:
+    #                 print(g.pk, " -> ", g.get_next_pks(), g.explore_siblings)
+    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+    #
+    #     #add relation between graphmessages
+    #     if request.data.get("action") == "add relation":
+    #         pk = request.data.get("pk")
+    #
+    #         array = request.data.get("next")
+    #         try:
+    #             curr = GraphMessage.objects.get(pk=pk)
+    #             for a in array:
+    #                 f = GraphMessage.objects.get(pk=a)
+    #                 if (curr.author == "USER" and f.author == "USER") or a == pk:
+    #                     return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "no user to user"})
+    #
+    #         except Exception:
+    #             return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "something went wrong"})
+    #
+    #         for a in array:
+    #             curr.next.add(GraphMessage.objects.get(pk=a))
+    #
+    #         print(pk, " -> ", curr.get_next_pks())
+    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
 
-            return Response(status=status.HTTP_200_OK)
-
-        if request.data.get("action") == "printuserpk":
-
-            for u in User.objects.all():
-                print(u.username+": " + str(u.pk))
-
-            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
-
-        if request.data.get("action") == "printpk":
-
-            for g in GraphMessage.objects.all():
-                if len(g.next.all()) == 0:
-                    print(g.pk)
-
-            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
-
-        if request.data.get("action") == "add relation":
-            pk = request.data.get("pk")
-
-            array = request.data.get("next")
-            try:
-                curr = GraphMessage.objects.get(pk=pk)
-
-                for a in array:
-                    f = GraphMessage.objects.get(pk=a)
-                    if (curr.author == "USER" and f.author == "USER") or a == pk:
-                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "no user to user"})
-
-            except Exception:
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "something went wrong"})
-
-
-            for a in array:
-                curr.next.add(GraphMessage.objects.get(pk=a))
-
-            print(pk, " -> ", curr.get_next_pks())
-
-            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
-
-        if request.data.get("action") == "printGraph":
-            with open("graph.csv", 'w', newline='', encoding='utf-8') as csvfile:
-                header = ['pk_relation', 'author', 'min', 'content']
-
-                writer = csv.writer(csvfile, delimiter=',', quotechar='\'')
-
-                writer.writerow(header)
-                for gm in GraphMessage.objects.all():
-                    writer.writerow([f"{gm.pk} -> {gm.get_next_pks()}",
-                                     gm.author,
-                                     gm.explore_siblings,
-                                     gm.content]
-                                    )
-        return Response(status=status.HTTP_200_OK)
-
-
-@api_view(['GET'])
-def createadmin(request):
-    superuser = User.objects.create_superuser(ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD)
-    superuser.save()
-    print("Created admin")
-    token, created = Token.objects.get_or_create(user=superuser)
-    return Response(status=status.HTTP_200_OK)
+# @api_view(['GET'])
+# def createadmin(request):
+#     superuser = User.objects.create_superuser(ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD)
+#     superuser.save()
+#     print("Created admin")
+#     token, created = Token.objects.get_or_create(user=superuser)
+#     return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -204,16 +189,16 @@ def adminlogin(request):
                                 "error": "USER_NOT_FOUND",
                             })
 
-        authenticated_user = authenticate(request, username=username, password=password)
+        authenticated_admin_user = authenticate(request, username=username, password=password)
 
-        if authenticated_user is not None:
-            django_login(request, authenticated_user)
+        if authenticated_admin_user is not None:
+            django_login(request, authenticated_admin_user)
 
-            token, created = Token.objects.get_or_create(user=authenticated_user)
+            token, created = Token.objects.get_or_create(user=authenticated_admin_user)
 
             return Response(status=status.HTTP_200_OK, data={
                 "success": "LOGIN_SUCCESS",
-                "username": authenticated_user.username,
+                "username": authenticated_admin_user.username,
                 "token": token.key
             })
 
@@ -236,7 +221,7 @@ def getuserdata(request):
     if request.method == 'POST':
 
 
-        admin = User.objects.get(username=ADMIN_USERNAME)
+        admin = User.objects.get(username=request.data.get("username"))
 
         token, created = Token.objects.get_or_create(user=admin)
 
@@ -253,11 +238,10 @@ def getuserdata(request):
 
             directly_invited_len = len(UserInfo.objects.filter(invited_by=user))
 
-            print("total inv", user.username)
             total_invited_len = user.userinfo.get_total_invited_len()
 
             directly_recruited_len = user.userinfo.get_directly_recruited_len()
-            total_recruited_len = user.userinfo.get_directly_recruited_len()
+            total_recruited_len = user.userinfo.get_total_recruited_len()
 
             all_userinfos.append(
                 {
@@ -279,7 +263,8 @@ def getuserdata(request):
                 }
             )
 
-        return Response(status=status.HTTP_200_OK, data={"all_userinfos": all_userinfos})
+        return Response(status=status.HTTP_200_OK, data={"all_userinfos": all_userinfos,
+                                                         "MINIMUM_DURATION_MINUTES": MINIMUM_DURATION_MINUTES})
 
 
 @api_view(['GET', 'POST', 'DELETE'])
@@ -358,24 +343,10 @@ def accounts(request):
             except User.DoesNotExist as e:
                 print("Error:", e, "Einladender Nutzer existiert nicht!")
 
-        # try to send verification email
-        try:
-            create_new_verification_code(new_user)
-            result = send_confirmation_email(new_user)
-
-            # sending process was not successfull
-            if not result == 1:
-                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                data={"error": "Senden der Email fehlgeschlagen!"})
-
-        # TODO specify if an exception ever occurs
-        except Exception as e:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})
+        create_new_verification_code(new_user)
 
         return Response(status=status.HTTP_201_CREATED,
-                        data={"success-message": (
-                            f"Account erstellt! Eine Email wurde an {new_user.userinfo.email} gesendet. "
-                            "Du kannst dieses Popup nun schließen.")})
+                        data={"success-message": "Account erstellt! Du kannst dieses Popup nun schließen und dich einloggen."})
 
     #TODO remove
     if request.method == 'DELETE':
@@ -426,47 +397,51 @@ def score(request, user_pk=""):
             "directly_recruited_len": directly_recruited_len,
             "user_score": user_score})
 
+# debug only
+# @api_view(['DELETE'])
+# def history(request):
+#     if request.method == 'DELETE':
+#
+#         if not request.data.get("username"):
+#             return Response(status=status.HTTP_404_NOT_FOUND,
+#                             data={
+#                                 "error": "INCOMPLETE_REQUEST",
+#                             })
+#
+#         username = request.data.get("username")
+#         user = User.objects.get(username=username)
+#
+#         print("Delete history of ", username)
+#
+#         user.userinfo.last_bot_message_pk = -1
+#         user.userinfo.completed_survey_part1 = False
+#         user.userinfo.completed_survey_part2 = False
+#         user.userinfo.completed_dialog = False
+#         user.userinfo.rushed = False
+#         user.userinfo.save()
+#
+#         try:
+#             user.history.delete()
+#         except History.DoesNotExist as e:
+#             print(e)
+#             pass
+#         else:
+#             print(f"History of {username} was successfully deleted!")
+#         new_history = History(user=User.objects.get(username=username))
+#         new_history.save()
+#
+#         return Response(status=status.HTTP_200_OK)
 
-@api_view(['DELETE'])
-def history(request):
-    if request.method == 'DELETE':
 
-        if not request.data.get("username"):
-            return Response(status=status.HTTP_404_NOT_FOUND,
-                            data={
-                                "error": "INCOMPLETE_REQUEST",
-                            })
-
-        username = request.data.get("username")
-        user = User.objects.get(username=username)
-
-        print("Delete history of ", username)
-
-        user.userinfo.last_bot_message_pk = -1
-        user.userinfo.completed_survey_part1 = False
-        user.userinfo.completed_survey_part2 = False
-        user.userinfo.completed_dialog = False
-        user.userinfo.save()
-
-        try:
-            user.history.delete()
-        except History.DoesNotExist as e:
-            print(e)
-            pass
-        else:
-            print(f"History of {username} was successfully deleted!")
-        new_history = History(user=User.objects.get(username=username))
-        new_history.save()
-
-        return Response(status=status.HTTP_200_OK)
-
-
-@api_view(['POST', 'DELETE'])
+@api_view(['POST'])
 def survey_data(request, user_pk="", survey_part=""):
+
     ### verify token
-    response = verify_token(request.data.get("token"), request.data.get("username"))
+    username = User.objects.get(pk=int(user_pk)).username
+    response = verify_token(request.data.get("token"), username)
     if response:
         return response
+    print("HERE")
 
     if request.method == 'POST':
         survey_part = int(survey_part)
@@ -530,20 +505,6 @@ def survey_data(request, user_pk="", survey_part=""):
                                 data={"ERROR": "SURVEY_NOT_SAVED",
                                       "error-message": f"{user.username}'s survey part {survey_part} data was not saved!"})
 
-    #TODO remove
-    if request.method == 'DELETE':
-
-        try:
-            user = User.objects.get(pk=int(user_pk))
-        except User.DoesNotExist as e:
-            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
-
-        user.userinfo.completed_survey_part2 = False
-        user.userinfo.completed_dialog = False
-        user.userinfo.save()
-
-        return Response(status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 def verify_token_view(request):
@@ -553,8 +514,6 @@ def verify_token_view(request):
 
         response = verify_token(request.data.get("token"), request.data.get("username"), True)
         return response
-
-
 
 
 @api_view(['POST'])
@@ -622,7 +581,7 @@ def get_chatdata(request):
                 "pk": user_res.pk,
                 "content": user_res.content
             }
-            # TODO
+
             if allowed_to_display(user, user_res, last_bot_response):
                 choices.append(user_response)
 

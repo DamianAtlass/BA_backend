@@ -11,7 +11,8 @@ from app.models import UserInfo, GraphMessage, HistoryMessage
 import json
 import csv
 
-MINIMUM_DURATION_MINUTES = 3
+#TODO set this to an appropriate amount
+MINIMUM_DURATION_MINUTES = 0
 
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
@@ -170,3 +171,36 @@ def verify_token(request_token, username, return_response_on_success=False):
                         data={
                             "error": "USER_NOT_FOUND"
                         })
+
+
+def save_survey_data(user_pk, survey_part, data):
+    """
+    Saves survey data as json file.
+
+    :param user_pk: 3 digit pre-zeroed
+    :param survey_part: part of survey (1 or 2)
+    :param data: stringyfied json data
+    :return: true if file created else false
+    """
+
+    if User.objects.get(pk=user_pk).userinfo.rushed:
+        suffix = "_rushed"
+    else:
+        suffix = ""
+
+    dir_path = safe_check_dir([USER_DATA_DIRECTORY, f"surveyData_part{survey_part}"])
+    file_path = f"{os.path.join(dir_path, f'{user_pk}{suffix}')}.json"
+
+
+
+    # TODO take out if live???
+    # if file exists, add _new (for debugging), there should never be more than 1 file of a participant
+    file_path = safe_file_path(file_path)
+
+    print(file_path)
+    json_object = json.dumps(data, indent=4)
+    print(json_object)
+    with open(file_path, "w", encoding='utf-8') as outfile:
+        outfile.write(json_object)
+
+    return os.path.exists(file_path)
