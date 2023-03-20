@@ -12,7 +12,7 @@ import json
 import csv
 
 #TODO set this to an appropriate amount
-MINIMUM_DURATION_MINUTES = 0
+MINIMUM_DURATION_MINUTES = 1
 
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
