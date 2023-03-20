@@ -24,7 +24,7 @@ DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
 USERSCORE_MULTIPLIER = 100
 
-#TODO: remove post and delete?
+
 @api_view(['GET'])
 def ok(request):
     if request.method == 'GET':
@@ -305,19 +305,8 @@ def accounts(request):
                                   "error-message": "Benutzername ungültig oder bereits vergeben!"})
 
         ### create userinfo
-        # TODO: remove partly(!) when live
-        match request.data.get("email"):
-            case "alice@mail.com":
-                dialog_style = DIALOG_STYLE_ONE_ON_ONE
-            case "ben@mail.com":
-                dialog_style = DIALOG_STYLE_COLORED_BUBBLES
-            case "christian@mail.de":
-                dialog_style = DIALOG_STYLE_CLASSIC_GROUP
-            case "daniel@mail.de":
-                dialog_style = DIALOG_STYLE_PICTURE
-            case _:
-                dialog_style = random.choice([DIALOG_STYLE_ONE_ON_ONE, DIALOG_STYLE_COLORED_BUBBLES,
-                                              DIALOG_STYLE_CLASSIC_GROUP, DIALOG_STYLE_PICTURE])
+        dialog_style = random.choice([DIALOG_STYLE_ONE_ON_ONE, DIALOG_STYLE_COLORED_BUBBLES,
+                                      DIALOG_STYLE_CLASSIC_GROUP, DIALOG_STYLE_PICTURE])
 
         userinfo = UserInfo(user=new_user,
                             email=request.data.get("email"),
@@ -348,24 +337,6 @@ def accounts(request):
         return Response(status=status.HTTP_201_CREATED,
                         data={"success-message": "Account erstellt! Du kannst dieses Popup nun schließen und dich einloggen."})
 
-    #TODO remove
-    if request.method == 'DELETE':
-        print(request.data)
-        username = request.data.get("username")
-        tmp = username
-        try:
-            User.objects.get(username=username).delete()
-        except User.DoesNotExist as e:
-            return Response(status=status.HTTP_404_NOT_FOUND,
-                            data={
-                                "error": str(e)
-                            })
-        else:
-            try:
-                User.objects.get(username=username)
-            except User.DoesNotExist:
-                print(f"User {tmp} was successfully deleted!")
-                return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

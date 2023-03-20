@@ -12,7 +12,7 @@ import json
 import csv
 
 #TODO set this to an appropriate amount
-MINIMUM_DURATION_MINUTES = 1
+MINIMUM_DURATION_MINUTES = 2
 
 def get_bot_messages(bot_response: GraphMessage, user: User):
     bot_responses = []
@@ -68,8 +68,7 @@ def log_messages(user=None):
 
     with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
         header = ['date', 'author', "content", "order_id", "pk"]
-        #TODO set quote char to quotechar='\'' when live
-        writer = csv.writer(csvfile, delimiter=',', quotechar='\"')
+        writer = csv.writer(csvfile, delimiter=',', quotechar='\'')
         writer.writerow(header)
         for message in user.history.messages.all():
             writer.writerow([convert_to_localtime(message.date, "%d-%m-%Y_%H-%M-%S"),
@@ -193,7 +192,6 @@ def save_survey_data(user_pk, survey_part, data):
 
 
 
-    # TODO take out if live???
     # if file exists, add _new (for debugging), there should never be more than 1 file of a participant
     file_path = safe_file_path(file_path)
 

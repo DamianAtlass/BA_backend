@@ -28,7 +28,7 @@ class UserInfo(models.Model):
             print("---------------------------------------")
 
         if self.rushed:
-            return 0 #TODO give phantom points?
+            return 0 #TODO give phantom points? yes
         else:
             return self.get_user_score_rec(weight, factor)
 
