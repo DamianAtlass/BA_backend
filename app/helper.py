@@ -3,6 +3,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 import os
 from datetime import datetime
+from env import FRONTEND_API_URL
 
 USER_DATA_DIRECTORY = "userdata"
 
@@ -11,6 +12,17 @@ def convert_to_localtime(utctime, format="%H:%M"):
     utc = utctime.replace(tzinfo=pytz.UTC)
     local_tz = utc.astimezone(timezone.get_current_timezone())
     return local_tz.strftime(format)
+
+def get_link_to_website():
+    url = f"{FRONTEND_API_URL}login"
+    return url
+
+
+def create_invitation_link(user_pk):
+    user_pk_str_pad = str(user_pk).zfill(3)
+    url = f"{FRONTEND_API_URL}login?h={user_pk_str_pad}"
+    return url
+
 
 
 def safe_check_dir(folder_array):
@@ -42,26 +54,11 @@ def safe_file_path(file_path):
 
     return file_path
 
-#TODO
-def is_testing_user(user):
-    if user.userinfo.email == "alice@mail.com" \
-            or user.userinfo.email == "ben@mail.com" \
-            or user.userinfo.email == "christian@mail.de" \
-            or user.userinfo.email == "daniel@mail.de":
-        return True
-    else:
-        return False
-
 
 def send_confirmation_email(user):
 
     message = f"Danke für deine Teilnahme an dieser Studie, {user.username}! Gib beim Login diesen Code ein, um dich zu verifizieren: {user.userinfo.verification_code}"
 
-    if is_testing_user(user):
-        print("is testing-user, dont send email")
-        return 1
-    else:
-        print("send email!")
 
     return send_mail(
         subject='Bestätige deine Emailadresse!',
@@ -70,3 +67,6 @@ def send_confirmation_email(user):
         recipient_list=[user.userinfo.email],
         fail_silently=False,
     )
+
+
+

@@ -5,8 +5,7 @@ from .helper import convert_to_localtime
 
 # Create your models here.
 
-USER = "USER"
-
+USERSCORE_MULTIPLIER = 100
 
 class UserInfo(models.Model):
     user = models.OneToOneField(User, related_name="userinfo",  on_delete=models.CASCADE, null=True)
@@ -30,9 +29,15 @@ class UserInfo(models.Model):
         if self.rushed:
             return 0 #TODO give phantom points? yes
         else:
-            return self.get_user_score_rec(weight, factor)
+            return self.get_user_score_rec(weight, factor) * USERSCORE_MULTIPLIER
 
     def get_user_score_rec(self, weight=1, factor=2):
+        """
+
+        :param weight:
+        :param factor:
+        :return: userscore a.k.a. cookies
+        """
         print(self.user.username, "total_recruited_len_rec")
         if not self.completed_survey_part2:
             return 0
@@ -69,6 +74,10 @@ class UserInfo(models.Model):
         return len(UserInfo.objects.filter(invited_by=self.user, completed_survey_part2=True, rushed=False))
 
     def get_total_recruited_len(self):
+        """
+
+        :return: number of inderectly and directly recruited participants a.k.a. doughnuts
+        """
 
         if self.rushed:
             return self.total_recruited_len_rec()
@@ -143,5 +152,6 @@ class HistoryMessage(models.Model):
     class Meta:
         verbose_name = "HistoryMessage"
         verbose_name_plural = "HistoryMessages"
+
 
 

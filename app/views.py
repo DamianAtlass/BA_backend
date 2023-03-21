@@ -5,13 +5,12 @@ from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
 from rest_framework.authtoken.models import Token
 
-from .helper import convert_to_localtime, send_confirmation_email
+from .helper import convert_to_localtime, send_confirmation_email, get_link_to_website
 from .extended_helper import get_bot_messages, allowed_to_display, create_new_verification_code, verify_token, \
-    check_if_rushed, get_interaction_duration_minutes, MINIMUM_DURATION_MINUTES, save_survey_data
+    get_interaction_duration_minutes, MINIMUM_DURATION_MINUTES, save_survey_data, send_reminder_email
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
 import random
-import csv
 
 # dialog styles
 DIALOG_STYLE_ONE_ON_ONE = "ONE_ON_ONE"
@@ -22,31 +21,29 @@ DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 #verification done with email
 DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
-USERSCORE_MULTIPLIER = 100
 
-
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def ok(request):
     if request.method == 'GET':
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
-    # if request.method == 'POST':
-    #     if request.data.get("action") == "test":
-    #         check_if_rushed(3)
-    #         print("XXX")
-    #
-    #
-    #         return Response(status=status.HTTP_200_OK)
+    if request.method == 'POST':
+        if request.data.get("action") == "test":
+            a = get_link_to_website(18)
+            print(a)
+
+
+            return Response(status=status.HTTP_200_OK)
     #
     #     if request.data.get("action") == "printuserpk":
     #         for u in User.objects.all():
     #             print(u.username+": " + str(u.pk))
     #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
     #
-    #     if request.data.get("action") == "print_graph_pk":
-    #         for g in GraphMessage.objects.all():
-    #             print(g.pk, " -> ", g.get_next_pks())
-    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+        if request.data.get("action") == "print_graph_pk":
+            for g in GraphMessage.objects.all():
+                print(g.pk, " -> ", g.get_next_pks())
+            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
     #
     #     if request.data.get("action") == "print_graph_pk_min":
     #         for g in GraphMessage.objects.all():
@@ -54,26 +51,26 @@ def ok(request):
     #                 print(g.pk, " -> ", g.get_next_pks(), g.explore_siblings)
     #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
     #
-    #     #add relation between graphmessages
-    #     if request.data.get("action") == "add relation":
-    #         pk = request.data.get("pk")
-    #
-    #         array = request.data.get("next")
-    #         try:
-    #             curr = GraphMessage.objects.get(pk=pk)
-    #             for a in array:
-    #                 f = GraphMessage.objects.get(pk=a)
-    #                 if (curr.author == "USER" and f.author == "USER") or a == pk:
-    #                     return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "no user to user"})
-    #
-    #         except Exception:
-    #             return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "something went wrong"})
-    #
-    #         for a in array:
-    #             curr.next.add(GraphMessage.objects.get(pk=a))
-    #
-    #         print(pk, " -> ", curr.get_next_pks())
-    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+        #add relation between graphmessages
+        if request.data.get("action") == "add relation":
+            pk = request.data.get("pk")
+
+            array = request.data.get("next")
+            try:
+                curr = GraphMessage.objects.get(pk=pk)
+                for a in array:
+                    f = GraphMessage.objects.get(pk=a)
+                    if (curr.author == "USER" and f.author == "USER") or a == pk:
+                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "no user to user"})
+
+            except Exception:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "something went wrong"})
+
+            for a in array:
+                curr.next.add(GraphMessage.objects.get(pk=a))
+
+            print(pk, " -> ", curr.get_next_pks())
+            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
 
 # @api_view(['GET'])
@@ -101,7 +98,7 @@ def login(request):
 
         try:
             User.objects.get(username=username)
-        except User.DoesNotExist as e:
+        except User.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={
                                 "error-message": "Dieser Nutzer ist nicht in der Datenbank.",
@@ -238,6 +235,7 @@ def getuserdata(request):
 
             directly_invited_len = len(UserInfo.objects.filter(invited_by=user))
 
+            print("XXX", user.username)
             total_invited_len = user.userinfo.get_total_invited_len()
 
             directly_recruited_len = user.userinfo.get_directly_recruited_len()
@@ -253,7 +251,7 @@ def getuserdata(request):
                     "completed_survey_part2": user.userinfo.completed_survey_part2,
                     "user_pk": user.pk,
                     "invited_by": user.userinfo.invited_by.username if user.userinfo.invited_by else "",
-                    "user_score": user.userinfo.get_user_score() * USERSCORE_MULTIPLIER,
+                    "user_score": user.userinfo.get_user_score(),
                     "directly_invited_len": directly_invited_len,
                     "total_invited_len": total_invited_len,
                     "directly_recruited_len": directly_recruited_len,
@@ -354,18 +352,33 @@ def invite(request, user_pk=""):
                             data={"error": str(e),
                                   "error-message": "Einladender Nutzer existiert nicht! Link ist kaputt!"})
 
+@api_view(['POST'])
+def send_reminder(request):
+    response = verify_token(request.data.get("token"), request.data.get("username"))
+    if response:
+        return response
+
+    if request.method == 'POST':
+        reminder_type = request.data.get("reminder_type")
+
+        print(reminder_type)
+
+        count_total, count_success = send_reminder_email(reminder_type)
+        print("here")
+        return Response(status=status.HTTP_200_OK, data={"count_total": count_total,
+                                                         "count_success": count_success})
 
 @api_view(['GET'])
 def score(request, user_pk=""):
     if request.method == 'GET':
         user_pk = int(user_pk)
         user = User.objects.get(pk=user_pk)
-        directly_recruited_len = user.userinfo.get_directly_recruited_len()
+        total_recruited_len = user.userinfo.get_total_recruited_len()
 
-        user_score = user.userinfo.get_user_score() * USERSCORE_MULTIPLIER
+        user_score = user.userinfo.get_user_score()
 
         return Response(status=status.HTTP_200_OK, data={
-            "directly_recruited_len": directly_recruited_len,
+            "total_recruited_len": total_recruited_len,
             "user_score": user_score})
 
 # debug only
@@ -412,7 +425,6 @@ def survey_data(request, user_pk="", survey_part=""):
     response = verify_token(request.data.get("token"), username)
     if response:
         return response
-    print("HERE")
 
     if request.method == 'POST':
         survey_part = int(survey_part)
@@ -480,8 +492,6 @@ def survey_data(request, user_pk="", survey_part=""):
 @api_view(['POST'])
 def verify_token_view(request):
     if request.method == 'POST':
-        username = request.data.get("username")
-        request_token = request.data.get("token")
 
         response = verify_token(request.data.get("token"), request.data.get("username"), True)
         return response
@@ -490,7 +500,9 @@ def verify_token_view(request):
 @api_view(['POST'])
 def get_chatdata(request):
     ### verify token
-    verify_token(request.data.get("token"), request.data.get("username"), False)
+    response = verify_token(request.data.get("token"), request.data.get("username"))
+    if response:
+        return response
 
     if request.method == 'POST':
 
@@ -556,6 +568,7 @@ def get_chatdata(request):
             if allowed_to_display(user, user_res, last_bot_response):
                 choices.append(user_response)
 
+        random.shuffle(choices)
         response_data = {
             "history": history,
             "bot_responses": bot_responses,

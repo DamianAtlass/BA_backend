@@ -32,4 +32,5 @@ urlpatterns = [
     re_path("api/getchatdata/", views.get_chatdata),
     re_path("api/verifytoken/", views.verify_token_view),
     re_path(r"api/invite/(?P<user_pk>\d{3})/$", views.invite),
+    re_path(r"api/sendreminder/", views.send_reminder),
 ]

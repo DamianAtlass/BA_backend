@@ -5,8 +5,9 @@ from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-
-from app.helper import convert_to_localtime, safe_check_dir, safe_file_path, USER_DATA_DIRECTORY
+from django.core.mail import send_mail
+from app.helper import convert_to_localtime, safe_check_dir, safe_file_path, USER_DATA_DIRECTORY, get_link_to_website, \
+    create_invitation_link
 from app.models import UserInfo, GraphMessage, HistoryMessage
 import json
 import csv
@@ -202,3 +203,54 @@ def save_survey_data(user_pk, survey_part, data):
         outfile.write(json_object)
 
     return os.path.exists(file_path)
+
+
+def send_reminder_email(reminder_type):
+    """
+    :param reminder_type:
+    :return:
+    int email_total: number of total emails that were tried to send
+    int email_success: number of sucessfully emails
+    """
+    count_total = 0
+    count_success = 0
+
+    for user in User.objects.all():
+
+        if user.is_staff \
+                or (reminder_type == "completed" and not user.userinfo.completed_survey_part2) \
+                or (reminder_type == "not_completed" and user.userinfo.completed_survey_part2):
+            continue
+
+        count_total += 1
+
+        if reminder_type == "completed":
+            subject = "Vielen Dank für deine Teilnahme! Das ist dein Score..."
+
+            message = f"""Danke, dass du an der Studie teilgenommen hast, {user.username}!\n
+            Hier ist dein Score:\n
+            Doughnuts🍩: {user.userinfo.get_total_recruited_len()}
+            Cookies🍪: {user.userinfo.get_user_score()}
+            \n\n
+            Nicht schlecht, aber denke daran, dass du deine Chancen zu gewinnen immer noch steigern kannst!\n
+            Teile dazu einfach diesen Link mit deinen Freunden: {create_invitation_link(user.pk)}
+            """
+        else:
+            subject = "Du bist noch nicht fertig!"
+
+            message = f"""Danke, für dein Interesse an der Studie, {user.username}!\n
+            Noch bist du aber nicht fertig, hier zurück zur Studie: {get_link_to_website()}\n
+            """
+
+        result = send_mail(
+            subject=subject,
+            message=message,
+            from_email=None,  # django will use EMAIL_HOST_USER anyway
+            recipient_list=[user.userinfo.email],
+            fail_silently=False,
+        )
+        print("result", result)
+        if result == 1:
+            count_success += 1
+
+    return count_total, count_success
