@@ -1,8 +1,14 @@
-from pybackup.backup import Backup
-import os
+from time import localtime, strftime
+import shutil
 
-if not os.path.exists("userdata"):
-    os.makedirs("userdata")
+# Source path
+src = 'userdata'
 
-bkp = Backup(verbose=True)
-bkp.run()
+now = strftime("%Y-%m-%d_%H-%M-%S", localtime())
+# Destination path
+dest = f'Backup/userdata_{now}'
+
+# Copy the content of
+# source to destination
+destination = shutil.copytree(src, dest)
+
