@@ -35,10 +35,10 @@ def ok(request):
 
             return Response(status=status.HTTP_200_OK)
     #
-    #     if request.data.get("action") == "printuserpk":
-    #         for u in User.objects.all():
-    #             print(u.username+": " + str(u.pk))
-    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+        if request.data.get("action") == "printuserpk":
+            for u in User.objects.all():
+                print(u.username+": " + str(u.pk))
+            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
     #
         if request.data.get("action") == "print_graph_pk":
             for g in GraphMessage.objects.all():
@@ -93,7 +93,6 @@ def login(request):
                         })
 
     if request.method == 'POST':
-        print(request.data)
         username = request.data.get("username")
 
         try:
@@ -118,13 +117,11 @@ def login(request):
                 "completed_survey_part1": authenticated_user.userinfo.completed_survey_part1,
                 "completed_survey_part2": authenticated_user.userinfo.completed_survey_part2,
             }
-            print("data: ", data)
 
             token, created = Token.objects.get_or_create(user=authenticated_user)
 
             request_token = request.data.get("token")
-            if not request_token:
-                print("no request token")
+
 
             if token.key == request.data.get("token"):
                 return Response(status=status.HTTP_200_OK, data=data)
@@ -133,8 +130,7 @@ def login(request):
                 verification_code = request.data.get("verification_code")
                 if verification_code:
                     verification_code = int(verification_code)
-                    print("XXX verification_code: ", verification_code)
-                    print("XXX request.data.get('verification_code'): ", request.data.get("verification_code"))
+
                     if verification_code == authenticated_user.userinfo.verification_code:
                         data["token"] = token.key
                         return Response(status=status.HTTP_200_OK, data=data)
@@ -173,7 +169,6 @@ def login(request):
 def adminlogin(request):
     print("ADMIN LOGIN ATTEMPT")
     if request.method == 'POST':
-        print(request.data)
         username = request.data.get("username")
         password = request.data.get("admin_password")
 
@@ -235,7 +230,6 @@ def getuserdata(request):
 
             directly_invited_len = len(UserInfo.objects.filter(invited_by=user))
 
-            print("XXX", user.username)
             total_invited_len = user.userinfo.get_total_invited_len()
 
             directly_recruited_len = user.userinfo.get_directly_recruited_len()
@@ -275,7 +269,6 @@ def accounts(request):
                                 "error": "INCOMPLETE_REQUEST",
                             })
 
-        print(request.data)
 
         ###check if email exists in userinfo before actuall user is created
 
@@ -292,12 +285,11 @@ def accounts(request):
             new_user = User.objects.create_user(username=request.data.get("username"),
                                                 password=DEFAULT_PASSWORD)
             new_user.save()
-            print(f"User {new_user.username} created!")
+            print(f"NEW USER {new_user.username} created!")
 
             Token.objects.get_or_create(user=new_user)
 
         except IntegrityError as e:
-            print(e)
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             data={"error": str(e),
                                   "error-message": "Benutzername ungültig oder bereits vergeben!"})
@@ -323,12 +315,14 @@ def accounts(request):
 
                 if not inviting_user.userinfo.completed_survey_part2:
                     return Response(status=status.HTTP_400_BAD_REQUEST,
-                                    data={"error": "Einladender Nutzer muss Studie vorher ausfüllen!"})
+                                    data={"error": "INVITING_USER_NOT_DONE",
+                                        "error-message": "Einladender Nutzer muss Studie vorher ausfüllen!"})
 
                 new_user.userinfo.invited_by = inviting_user
                 new_user.userinfo.save()
             except User.DoesNotExist as e:
-                print("Error:", e, "Einladender Nutzer existiert nicht!")
+                pass
+                #print("Error:", e, "Einladender Nutzer existiert nicht!")
 
         create_new_verification_code(new_user)
 
@@ -350,7 +344,7 @@ def invite(request, user_pk=""):
             print("didnt found user")
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={"error": str(e),
-                                  "error-message": "Einladender Nutzer existiert nicht! Link ist kaputt!"})
+                                  "error-message": "Einladender Nutzer existiert nicht!"})
 
 @api_view(['POST'])
 def send_reminder(request):
@@ -458,6 +452,9 @@ def survey_data(request, user_pk="", survey_part=""):
             user.userinfo.save()
 
             if success:
+                user.userinfo.completed_survey_part1 = True
+                user.userinfo.save()
+
                 return Response(status=status.HTTP_200_OK)
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST,

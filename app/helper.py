@@ -27,7 +27,6 @@ def create_invitation_link(user_pk):
 
 def safe_check_dir(folder_array):
     if len(folder_array) == 0:
-        print("")
         raise ValueError("Folder_array cannot be empty")
 
     dir_check = ""

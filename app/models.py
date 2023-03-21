@@ -23,8 +23,6 @@ class UserInfo(models.Model):
         return f"[{self.pk}] Userinfo for {self.user} ({self.email})"
 
     def get_user_score(self, weight=1, factor=2):
-        if self.user.username =="testuser1":
-            print("---------------------------------------")
 
         if self.rushed:
             return 0 #TODO give phantom points? yes
@@ -50,9 +48,7 @@ class UserInfo(models.Model):
             sum += _userinfo.get_user_score_rec(weight=weight/factor, factor=factor)
 
         if self.rushed:
-            print("return sum, sum", sum)
             return sum
-        print("return sum + weight, sum=", sum)
         return sum + weight
 
     def get_directly_invited_len(self):

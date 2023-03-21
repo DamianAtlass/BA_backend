@@ -36,14 +36,10 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
         if bot_response.is_end:
             print("DIALOG FINISHED")
             user.userinfo.completed_dialog = True
-
             user.userinfo.rushed = check_if_rushed(user)
             user.userinfo.save()
 
-
-
-            result = log_messages(user)
-            print("Write messages:", result)
+            log_messages(user)
             return bot_response, bot_responses
         else:
             if bot_response.next.all()[0].author == "USER":
@@ -60,12 +56,9 @@ def log_messages(user=None):
         suffix = ""
     file_path = f"{os.path.join(dir_path, f'{user.pk:03}{suffix}')}.csv"
     file_path = safe_file_path(file_path)
-    print("filepath: ", file_path)
 
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
-
-    print(file_path)
 
     with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
         header = ['date', 'author', "content", "order_id", "pk"]
@@ -90,24 +83,17 @@ def allowed_to_display(user=None, choice=None, parent=None):
     :return:
     """
 
-    if choice.author !="USER":
-        print("ERROR")
-
     # get sibling pks relative to choice
     siblings_pk = list(map(lambda o: o.pk, parent.next.all()))
-    print("siblings_pk:", siblings_pk)
 
     history_messages = user.history.messages.all()
     unique_graph_messages_pks_from_history = set(map(lambda x: x.graph_message.pk, history_messages))
-    print("unique_graph_messages_pks_from_history:", unique_graph_messages_pks_from_history)
 
-    print("choice.pk:", choice.pk)
+
     if choice.pk in unique_graph_messages_pks_from_history:
-        print(f"path {choice.content} already taken")
         return False
 
     if choice.explore_siblings == 0:
-        print("Result: explore_siblings == 0", True)
         return True
 
     explored_path = 0
@@ -117,7 +103,6 @@ def allowed_to_display(user=None, choice=None, parent=None):
 
     result = True if explored_path >= choice.explore_siblings else False
 
-    print("Result: ", result)
     return result
 
 
@@ -196,9 +181,7 @@ def save_survey_data(user_pk, survey_part, data):
     # if file exists, add _new (for debugging), there should never be more than 1 file of a participant
     file_path = safe_file_path(file_path)
 
-    print(file_path)
     json_object = json.dumps(data, indent=4)
-    print(json_object)
     with open(file_path, "w", encoding='utf-8') as outfile:
         outfile.write(json_object)
 
