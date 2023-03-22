@@ -82,7 +82,7 @@ def ok(request):
 
 @api_view(['POST'])
 def login(request):
-    print("LOGIN ATTEMPT")
+    print(f"LOGIN ATTEMPT OF {request.data.get('username')}")
 
     if not request.data.get("username"):
         return Response(status=status.HTTP_404_NOT_FOUND,
@@ -134,29 +134,40 @@ def login(request):
                         return Response(status=status.HTTP_200_OK, data=data)
                     else:
                         create_new_verification_code(authenticated_user)
-                        send_confirmation_email(authenticated_user)
-                        return Response(status=status.HTTP_401_UNAUTHORIZED,
-                                        data={
-                                            "error": "WRONG_VERIFICATION_CODE",
-                                            "error-message": "Code nicht korrekt. "
-                                                             "Ein Verifikations-Code wurde an deine Emailadresse gesendet! "
-                                                             "Bitte habe Geduld und sieh in deinem Spam-Postfach nach."
-                                        })
+                        print("send_confirmation_email...")
+                        result = send_confirmation_email(authenticated_user)
+                        # sending process was not successfull
+                        if not result == 1:
+                            print("EMAIL NOT SENT")
+                            return Response(status=status.HTTP_401_UNAUTHORIZED,
+                                            data={"error": "WRONG_TOKEN",
+                                                  "error-message": "Falscher Code. Es wurde versucht den neuen Verifikations-Code erneut "
+                                                                   "an deine Emailadresse zu senden. Das ist jedoch fehlgeschlagen. Bitte versuche es erneut!"})
+                        else:
+                            print("EMAIL SENT")
+                            return Response(status=status.HTTP_401_UNAUTHORIZED,
+                                            data={"error": "WRONG_TOKEN",
+                                                  "error-message": "Falscher Code. "
+                                                                   "Ein neuer Verifikations-Code wurde an deine Emailadresse gesendet! "
+                                                                   "Bitte habe Geduld und sieh in deinem Spam-Postfach nach."})
                 else:
+
                     # SEND CODE
                     create_new_verification_code(authenticated_user)
                     result = send_confirmation_email(authenticated_user)
                     # sending process was not successfull
                     if not result == 1:
+                        print("EMAIL NOT SENT")
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
                                         data={"error": "WRONG_TOKEN",
-                                              "error-message": "Verifikation notwendig. Es wurde versucht den Verifikations-Code erneut "
+                                              "error-message": "Verifikation notwendig. Es wurde versucht den neuen Verifikations-Code erneut "
                                                                "an deine Emailadresse zu senden. Das ist jedoch fehlgeschlagen. Bitte versuche es erneut!"})
                     else:
+                        print("EMAIL SENT")
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
                                         data={"error": "WRONG_TOKEN",
                                               "error-message": "Verifikation notwendig. "
-                                                               "Ein Verifikations-Code wurde an deine Emailadresse gesendet! "
+                                                               "Ein neuer Verifikations-Code wurde an deine Emailadresse gesendet! "
                                                                "Bitte habe Geduld und sieh in deinem Spam-Postfach nach."})
 
 
