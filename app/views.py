@@ -22,55 +22,53 @@ DIALOG_STYLE_PICTURE = "PROFILE_PICTURES"
 DEFAULT_PASSWORD = "DEFAULT_PASSWORD"
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 def ok(request):
     if request.method == 'GET':
         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
-    if request.method == 'POST':
-        if request.data.get("action") == "test":
-            a = get_link_to_website(18)
-            print(a)
-
-
-            return Response(status=status.HTTP_200_OK)
+    # if request.method == 'POST':
+    #     if request.data.get("action") == "test":
+    #         a = get_link_to_website(18)
     #
-        if request.data.get("action") == "printuserpk":
-            for u in User.objects.all():
-                print(u.username+": " + str(u.pk))
-            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
-    #
-        if request.data.get("action") == "print_graph_pk":
-            for g in GraphMessage.objects.all():
-                print(g.pk, " -> ", g.get_next_pks())
-            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
-    #
-    #     if request.data.get("action") == "print_graph_pk_min":
-    #         for g in GraphMessage.objects.all():
-    #             if g.explore_siblings !=0:
-    #                 print(g.pk, " -> ", g.get_next_pks(), g.explore_siblings)
+    #         return Response(status=status.HTTP_200_OK)
+    # #
+    #     if request.data.get("action") == "printuserpk":
+    #         for u in User.objects.all():
+    #             print(u.username+": " + str(u.pk))
     #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+    # #
+    #     if request.data.get("action") == "print_graph_pk":
+    #         for g in GraphMessage.objects.all():
+    #             print(g.pk, " -> ", g.get_next_pks())
+    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+    # #
+    # #     if request.data.get("action") == "print_graph_pk_min":
+    # #         for g in GraphMessage.objects.all():
+    # #             if g.explore_siblings !=0:
+    # #                 print(g.pk, " -> ", g.get_next_pks(), g.explore_siblings)
+    # #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+    # #
+    #     #add relation between graphmessages
+    #     if request.data.get("action") == "add relation":
+    #         pk = request.data.get("pk")
     #
-        #add relation between graphmessages
-        if request.data.get("action") == "add relation":
-            pk = request.data.get("pk")
-
-            array = request.data.get("next")
-            try:
-                curr = GraphMessage.objects.get(pk=pk)
-                for a in array:
-                    f = GraphMessage.objects.get(pk=a)
-                    if (curr.author == "USER" and f.author == "USER") or a == pk:
-                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "no user to user"})
-
-            except Exception:
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "something went wrong"})
-
-            for a in array:
-                curr.next.add(GraphMessage.objects.get(pk=a))
-
-            print(pk, " -> ", curr.get_next_pks())
-            return Response(status=status.HTTP_200_OK, data={"message": "OK"})
+    #         array = request.data.get("next")
+    #         try:
+    #             curr = GraphMessage.objects.get(pk=pk)
+    #             for a in array:
+    #                 f = GraphMessage.objects.get(pk=a)
+    #                 if (curr.author == "USER" and f.author == "USER") or a == pk:
+    #                     return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "no user to user"})
+    #
+    #         except Exception:
+    #             return Response(status=status.HTTP_400_BAD_REQUEST, data={"message": "something went wrong"})
+    #
+    #         for a in array:
+    #             curr.next.add(GraphMessage.objects.get(pk=a))
+    #
+    #         print(pk, " -> ", curr.get_next_pks())
+    #         return Response(status=status.HTTP_200_OK, data={"message": "OK"})
 
 
 # @api_view(['GET'])
@@ -321,8 +319,7 @@ def accounts(request):
                 new_user.userinfo.invited_by = inviting_user
                 new_user.userinfo.save()
             except User.DoesNotExist as e:
-                pass
-                #print("Error:", e, "Einladender Nutzer existiert nicht!")
+                print("Error:", e, "Einladender Nutzer existiert nicht!")
 
         create_new_verification_code(new_user)
 
@@ -334,14 +331,12 @@ def accounts(request):
 @api_view(['GET'])
 def invite(request, user_pk=""):
     if request.method == 'GET':
-        print("enter function")
         user_pk = int(user_pk)
 
         try:
             inviting_user = User.objects.get(pk=user_pk)
             return Response(status=status.HTTP_200_OK, data={"inviting_user": inviting_user.username})
         except User.DoesNotExist as e:
-            print("didnt found user")
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={"error": str(e),
                                   "error-message": "Einladender Nutzer existiert nicht!"})
@@ -355,10 +350,8 @@ def send_reminder(request):
     if request.method == 'POST':
         reminder_type = request.data.get("reminder_type")
 
-        print(reminder_type)
-
         count_total, count_success = send_reminder_email(reminder_type)
-        print("here")
+
         return Response(status=status.HTTP_200_OK, data={"count_total": count_total,
                                                          "count_success": count_success})
 
@@ -509,7 +502,6 @@ def get_chatdata(request):
                                 "error": "INCOMPLETE_REQUEST",
                             })
 
-        print("data: ", request.data)
         user_response_pk = request.data.get("user_response_pk", None)
         username = request.data.get("username")
 

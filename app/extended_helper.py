@@ -232,7 +232,7 @@ def send_reminder_email(reminder_type):
             recipient_list=[user.userinfo.email],
             fail_silently=False,
         )
-        print("result", result)
+
         if result == 1:
             count_success += 1
 
