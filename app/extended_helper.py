@@ -212,7 +212,7 @@ def send_reminder_email(reminder_type):
 
             message = f"""Danke, dass du an der Studie teilgenommen hast, {user.username}!\n
             Hier ist dein Score:\n
-            Doughnuts🍩: {user.userinfo.get_total_recruited_len()}
+            Donuts🍩: {user.userinfo.get_total_recruited_len()}
             Cookies🍪: {user.userinfo.get_user_score()}
             \n\n
             Nicht schlecht, aber denke daran, dass du deine Chancen zu gewinnen immer noch steigern kannst!\n

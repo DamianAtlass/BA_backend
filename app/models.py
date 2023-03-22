@@ -72,7 +72,7 @@ class UserInfo(models.Model):
     def get_total_recruited_len(self):
         """
 
-        :return: number of inderectly and directly recruited participants a.k.a. doughnuts
+        :return: number of inderectly and directly recruited participants a.k.a. donuts
         """
 
         if self.rushed:
