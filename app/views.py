@@ -316,6 +316,7 @@ def accounts(request):
         ### create history
         new_history = History(user=new_user)
         new_history.save()
+        create_new_verification_code(new_user)
 
         ### set invited by
         if request.data.get("invitedBy"):
@@ -323,16 +324,15 @@ def accounts(request):
                 inviting_user = User.objects.get(username=request.data.get("invitedBy"))
 
                 if not inviting_user.userinfo.completed_survey_part2:
-                    return Response(status=status.HTTP_400_BAD_REQUEST,
-                                    data={"error": "INVITING_USER_NOT_DONE",
-                                        "error-message": "Einladender Nutzer muss Studie vorher ausfüllen!"})
+                    return Response(status=status.HTTP_201_CREATED,
+                                    data={"success-message": "Account erstellt! Einladender Nutzer muss Studie vorher ausfüllen, um verknüpft werden zu können!"})
 
                 new_user.userinfo.invited_by = inviting_user
                 new_user.userinfo.save()
             except User.DoesNotExist as e:
-                print("Error:", e, "Einladender Nutzer existiert nicht!")
+                Response(status=status.HTTP_201_CREATED,
+                         data={"success-message": "Account erstellt! Einladender Nutzer muss existieren, um verknüpft werden zu können!"})
 
-        create_new_verification_code(new_user)
 
         return Response(status=status.HTTP_201_CREATED,
                         data={"success-message": "Account erstellt! Du kannst dieses Popup nun schließen und dich einloggen."})
@@ -452,13 +452,12 @@ def survey_data(request, user_pk="", survey_part=""):
                     "error-message": f"You can't do that yet!"})
 
             success = save_survey_data(user_pk, survey_part, request.data.get("json"))
+            print("success", success)
             user.userinfo.completed_survey_part1 = success
             user.userinfo.save()
 
             if success:
-                user.userinfo.completed_survey_part1 = True
-                user.userinfo.save()
-
+                print("user.userinfo.completed_survey_part1",user.userinfo.completed_survey_part1)
                 return Response(status=status.HTTP_200_OK)
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST,
