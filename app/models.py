@@ -36,7 +36,6 @@ class UserInfo(models.Model):
         :param factor:
         :return: userscore a.k.a. cookies
         """
-        print(self.user.username, "total_recruited_len_rec")
         if not self.completed_survey_part2:
             return 0
 

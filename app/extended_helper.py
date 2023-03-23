@@ -34,7 +34,7 @@ def get_bot_messages(bot_response: GraphMessage, user: User):
 
         # if not last node and next != usernode
         if bot_response.is_end:
-            print("DIALOG FINISHED")
+            print(f"DIALOG FINISHED FOR {user.username}")
             user.userinfo.completed_dialog = True
             user.userinfo.rushed = check_if_rushed(user)
             user.userinfo.save()

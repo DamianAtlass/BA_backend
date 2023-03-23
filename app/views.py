@@ -82,7 +82,7 @@ def ok(request):
 
 @api_view(['POST'])
 def login(request):
-    print(f"LOGIN ATTEMPT OF {request.data.get('username')}")
+    print(f"LOGIN ATTEMPT OF {request.data.get('username', None)}")
 
     if not request.data.get("username"):
         return Response(status=status.HTTP_404_NOT_FOUND,
@@ -268,9 +268,10 @@ def getuserdata(request):
                                                          "MINIMUM_DURATION_MINUTES": MINIMUM_DURATION_MINUTES})
 
 
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['POST'])
 def accounts(request):
     if request.method == 'POST':
+        print(F"CREATE USER {request.data.get('username', None)}")
 
         if not request.data.get("email") or not request.data.get("username"):
             return Response(status=status.HTTP_404_NOT_FOUND,
@@ -283,7 +284,7 @@ def accounts(request):
 
         try:
             UserInfo.objects.get(email=request.data.get("email"))
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            return Response(status=status.HTTP_400_BAD_REQUEST,
                             data={"error": "EMAIL_NOT_UNIQUE",
                                   "error-message": "Emailadresse bereits in Benutzung!"})
         except UserInfo.DoesNotExist as e:
@@ -299,7 +300,7 @@ def accounts(request):
             Token.objects.get_or_create(user=new_user)
 
         except IntegrityError as e:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            return Response(status=status.HTTP_400_BAD_REQUEST,
                             data={"error": str(e),
                                   "error-message": "Benutzername ungültig oder bereits vergeben!"})
 
@@ -437,6 +438,8 @@ def survey_data(request, user_pk="", survey_part=""):
         except User.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND, data={"error": str(e)})
 
+        print(f"GET SURVEY PART {survey_part} FROM USER {user.username}")
+
         # distinguish between survey part 1 and 2
         if survey_part == 1:
             # check if handed in aleady
@@ -452,12 +455,10 @@ def survey_data(request, user_pk="", survey_part=""):
                     "error-message": f"You can't do that yet!"})
 
             success = save_survey_data(user_pk, survey_part, request.data.get("json"))
-            print("success", success)
             user.userinfo.completed_survey_part1 = success
             user.userinfo.save()
 
             if success:
-                print("user.userinfo.completed_survey_part1",user.userinfo.completed_survey_part1)
                 return Response(status=status.HTTP_200_OK)
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST,
