@@ -134,7 +134,6 @@ def login(request):
                         return Response(status=status.HTTP_200_OK, data=data)
                     else:
                         create_new_verification_code(authenticated_user)
-                        print("send_confirmation_email...")
                         result = send_confirmation_email(authenticated_user)
                         # sending process was not successfull
                         if not result == 1:
@@ -142,14 +141,14 @@ def login(request):
                             return Response(status=status.HTTP_401_UNAUTHORIZED,
                                             data={"error": "WRONG_TOKEN",
                                                   "error-message": "Falscher Code. Es wurde versucht den neuen Verifikations-Code erneut "
-                                                                   "an deine Emailadresse zu senden. Das ist jedoch fehlgeschlagen. Bitte versuche es erneut!"})
+                                                                   "an deine Emailadresse zu senden. Das ist jedoch fehlgeschlagen. Bitte lade die Seite neu!"})
                         else:
                             print("EMAIL SENT")
                             return Response(status=status.HTTP_401_UNAUTHORIZED,
                                             data={"error": "WRONG_TOKEN",
                                                   "error-message": "Falscher Code. "
                                                                    "Ein neuer Verifikations-Code wurde an deine Emailadresse gesendet! "
-                                                                   "Bitte habe Geduld und sieh in deinem Spam-Postfach nach."})
+                                                                   "Bitte habe Geduld und suche in deinem Postfach nach 'remodisys@gmail.com'."})
                 else:
 
                     # SEND CODE
@@ -161,14 +160,14 @@ def login(request):
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
                                         data={"error": "WRONG_TOKEN",
                                               "error-message": "Verifikation notwendig. Es wurde versucht den neuen Verifikations-Code erneut "
-                                                               "an deine Emailadresse zu senden. Das ist jedoch fehlgeschlagen. Bitte versuche es erneut!"})
+                                                               "an deine Emailadresse zu senden. Das ist jedoch fehlgeschlagen. Bitte lade die Seite neu!"})
                     else:
                         print("EMAIL SENT")
                         return Response(status=status.HTTP_401_UNAUTHORIZED,
                                         data={"error": "WRONG_TOKEN",
                                               "error-message": "Verifikation notwendig. "
                                                                "Ein neuer Verifikations-Code wurde an deine Emailadresse gesendet! "
-                                                               "Bitte habe Geduld und sieh in deinem Spam-Postfach nach."})
+                                                               "Bitte habe Geduld und suche in deinem Postfach nach 'remodisys@gmail.com'."})
 
 
 

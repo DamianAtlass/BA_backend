@@ -55,9 +55,11 @@ def safe_file_path(file_path):
 
 
 def send_confirmation_email(user):
+    print(f"SEND EMAIL TO {user.username}")
 
     message = (f"Danke für deine Teilnahme an dieser Studie, {user.username}! "
                f"Gib beim Login diesen Code ein, um dich zu verifizieren: {user.userinfo.verification_code}\n\n"
+               f"\n(Falls du die Website bereits in einem anderen Tab geöffnet hast, dann nutze nicht diesen Link, da du sonst eine weitere Bestätigungsemail bekommst.)\n"
                f"{get_link_to_website()}")
 
 

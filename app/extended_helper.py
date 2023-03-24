@@ -234,6 +234,7 @@ def send_reminder_email(reminder_type):
         )
 
         if result == 1:
+            print(f"SENT REMINDER MAIL TO {user.username}")
             count_success += 1
 
     return count_total, count_success
