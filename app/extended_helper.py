@@ -12,6 +12,8 @@ from app.models import UserInfo, GraphMessage, HistoryMessage
 import json
 import csv
 
+dialog_styles = ["ONE_ON_ONE", "COLORED_BUBBLES", "CLASSIC_GROUP", "PROFILE_PICTURES"]
+
 #TODO set this to an appropriate amount
 MINIMUM_DURATION_MINUTES = 3.5
 
@@ -238,3 +240,20 @@ def send_reminder_email(reminder_type):
             count_success += 1
 
     return count_total, count_success
+
+
+def get_least_used_style():
+
+    returned_style = "ONE_ON_ONE"
+    minimum = float("inf")
+
+    for style in dialog_styles:
+        completed_datasets_len = len(UserInfo.objects.filter(dialog_style=style, completed_survey_part2=True, rushed=False))
+        #print(f"finished {style}: {completed_datasets_len}")
+
+        if completed_datasets_len < minimum:
+            minimum = completed_datasets_len
+            returned_style = style
+    print(f"minimum: {minimum} ({returned_style})")
+    return returned_style
+

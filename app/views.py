@@ -7,7 +7,8 @@ from rest_framework.authtoken.models import Token
 
 from .helper import convert_to_localtime, send_confirmation_email, get_link_to_website
 from .extended_helper import get_bot_messages, allowed_to_display, create_new_verification_code, verify_token, \
-    get_interaction_duration_minutes, MINIMUM_DURATION_MINUTES, save_survey_data, send_reminder_email
+    get_interaction_duration_minutes, MINIMUM_DURATION_MINUTES, save_survey_data, send_reminder_email, \
+    get_least_used_style
 from .models import UserInfo, History, GraphMessage, HistoryMessage
 from django.contrib.auth import authenticate, login as django_login
 import random
@@ -304,8 +305,7 @@ def accounts(request):
                                   "error-message": "Benutzername ungültig oder bereits vergeben!"})
 
         ### create userinfo
-        dialog_style = random.choice([DIALOG_STYLE_ONE_ON_ONE, DIALOG_STYLE_COLORED_BUBBLES,
-                                      DIALOG_STYLE_CLASSIC_GROUP, DIALOG_STYLE_PICTURE])
+        dialog_style = get_least_used_style()
 
         userinfo = UserInfo(user=new_user,
                             email=request.data.get("email"),
