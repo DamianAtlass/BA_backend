@@ -212,19 +212,21 @@ def send_reminder_email(reminder_type):
         if reminder_type == "completed":
             subject = "Vielen Dank für deine Teilnahme! Das ist dein Score..."
 
-            message = f"""Danke, dass du an der Studie teilgenommen hast, {user.username}!\n
+            message = f"""Danke, dass du an der Studie teilgenommen hast, {user.username}!
             Hier ist dein Score:\n
             Donuts🍩: {user.userinfo.get_total_recruited_len()}
             Cookies🍪: {user.userinfo.get_user_score()}
             \n\n
-            Nicht schlecht, aber denke daran, dass du deine Chancen zu gewinnen immer noch steigern kannst!\n
-            Teile dazu einfach diesen Link mit deinen Freunden: {create_invitation_link(user.pk)}
+            Nicht schlecht, aber andere sind auch fleißig! Noch hast du die Gelegenheit, einen der Preise zu gewinnen.\n
+            Teile dazu einfach diesen Link mit deinen Freunden: {create_invitation_link(user.pk)} . Sobald sie die Studie abschließen, bekommst du Punkte!
+            Zu gewinnen sind Geldbeträge im Gesamtwert von vrsl. 100€!
             """
         else:
             subject = "Du bist noch nicht fertig!"
 
-            message = f"""Danke, für dein Interesse an der Studie, {user.username}!\n
-            Noch bist du aber nicht fertig, hier zurück zur Studie: {get_link_to_website()}\n
+            message = f"""Danke, für dein Interesse an der Studie, {user.username}!
+            Noch bist du aber nicht fertig, hier zurück zur Studie: {get_link_to_website()}
+            Nimmst du teil, dann hast du die Chance Geldbeträge im Gesamtwert von vrsl. 100€ zu gewinnen!
             """
 
         result = send_mail(
